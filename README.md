@@ -1,0 +1,1 @@
+A simple time management app using a Gantt-style system. Create projects, add tasks, and visualize timelines to plan, schedule, and track work efficiently. A lightweight, intuitive tool for organizing projects and improving productivity.
