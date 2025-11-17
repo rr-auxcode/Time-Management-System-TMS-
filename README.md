@@ -22,7 +22,7 @@ This project aims to provide a lightweight, accessible system for managing time 
 
 🛠️ Technologies Used
 
-Frontend: ReactJS
+Frontend: ReactJS + CSS
 
 Backend: TypeScript
 
