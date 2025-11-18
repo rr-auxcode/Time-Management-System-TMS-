@@ -35,10 +35,12 @@ function AppContent() {
 
 function MainApp() {
   const { projects, selectedProject, addProject, updateProject, addTask, updateTask, isLoading, error } = useProjects();
-  const [view, setView] = useState<TimelineView>({
+  // Always show current month's days
+  const now = new Date();
+  const [view] = useState<TimelineView>({
     type: 'month',
-    startDate: new Date(),
-    endDate: new Date(),
+    startDate: new Date(now.getFullYear(), now.getMonth(), 1),
+    endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0), // Last day of current month
   });
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -106,9 +108,7 @@ function MainApp() {
     }
   };
 
-  const handleViewChange = (type: TimelineView['type']) => {
-    setView({ ...view, type });
-  };
+  // View change handler removed - always showing current month's days
 
   const handleGenerateHoursReport = () => {
     const reports = generateHoursReports(projects);
@@ -213,31 +213,8 @@ function MainApp() {
         />
         <div className="main-content">
           <div className="view-controls">
-            <div className="view-buttons">
-              <button
-                className={`view-btn ${view.type === 'day' ? 'active' : ''}`}
-                onClick={() => handleViewChange('day')}
-              >
-                Day
-              </button>
-              <button
-                className={`view-btn ${view.type === 'week' ? 'active' : ''}`}
-                onClick={() => handleViewChange('week')}
-              >
-                Week
-              </button>
-              <button
-                className={`view-btn ${view.type === 'month' ? 'active' : ''}`}
-                onClick={() => handleViewChange('month')}
-              >
-                Month
-              </button>
-              <button
-                className={`view-btn ${view.type === 'quarter' ? 'active' : ''}`}
-                onClick={() => handleViewChange('quarter')}
-              >
-                Quarter
-              </button>
+            <div className="month-display" style={{ fontSize: '1rem', fontWeight: 600, color: '#111827' }}>
+              {new Date(view.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </div>
             <div className="action-buttons">
               <button className="summary-btn" onClick={handleGenerateHoursReport} title="Generate and send hours reports by email">

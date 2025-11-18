@@ -9,36 +9,13 @@ export interface GanttBarPosition {
 }
 
 export const calculateTimelineRange = (view: TimelineView): { start: Date; end: Date } => {
+  // Always show days of the current month
   const now = new Date();
-  let start: Date;
-  let end: Date;
-
-  switch (view.type) {
-    case 'day':
-      start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      end = new Date(start);
-      end.setDate(end.getDate() + 1);
-      break;
-    case 'week':
-      start = getWeekStart(now);
-      end = new Date(start);
-      end.setDate(end.getDate() + 7);
-      break;
-    case 'month':
-      start = new Date(now.getFullYear(), now.getMonth(), 1);
-      end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-      break;
-    case 'quarter':
-      const quarter = Math.floor(now.getMonth() / 3);
-      start = new Date(now.getFullYear(), quarter * 3, 1);
-      end = new Date(now.getFullYear(), (quarter + 1) * 3, 1);
-      break;
-    default:
-      start = view.startDate;
-      end = view.endDate;
-  }
-
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+  end.setHours(23, 59, 59, 999);
+  
   return { start, end };
 };
 
@@ -111,72 +88,23 @@ export const generateTimelineHeaders = (view: TimelineView, containerWidth: numb
   const pixelsPerDay = getPixelsPerDay(containerWidth, days);
   const headers: Array<{ date: Date; label: string; x: number; width: number }> = [];
 
+  // Always show individual days of the current month
   const current = new Date(start);
+  current.setHours(0, 0, 0, 0);
 
-  switch (view.type) {
-    case 'day':
-      // Show hours
-      for (let i = 0; i < 24; i++) {
-        headers.push({
-          date: new Date(current),
-          label: `${i}:00`,
-          x: (i / 24) * containerWidth,
-          width: containerWidth / 24,
-        });
-      }
-      break;
-    case 'week':
-      // Show days
-      for (let i = 0; i < 7; i++) {
-        const dayDate = new Date(current);
-        dayDate.setDate(start.getDate() + i);
-        headers.push({
-          date: new Date(dayDate),
-          label: dayDate.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' }),
-          x: i * pixelsPerDay,
-          width: pixelsPerDay,
-        });
-      }
-      break;
-    case 'month':
-      // Show weeks
-      const weeksInMonth = Math.ceil(days / 7);
-      for (let i = 0; i < weeksInMonth; i++) {
-        const weekStart = new Date(current);
-        weekStart.setDate(start.getDate() + i * 7);
-        headers.push({
-          date: new Date(weekStart),
-          label: `Week ${i + 1}`,
-          x: i * (containerWidth / weeksInMonth),
-          width: containerWidth / weeksInMonth,
-        });
-      }
-      break;
-    case 'quarter':
-      // Show months
-      for (let i = 0; i < 3; i++) {
-        const monthDate = new Date(current);
-        monthDate.setMonth(start.getMonth() + i);
-        headers.push({
-          date: new Date(monthDate),
-          label: monthDate.toLocaleDateString('en-US', { month: 'short' }),
-          x: i * (containerWidth / 3),
-          width: containerWidth / 3,
-        });
-      }
-      break;
-    default:
-      // Show days as default
-      for (let i = 0; i < days; i++) {
-        const dayDate = new Date(current);
-        dayDate.setDate(start.getDate() + i);
-        headers.push({
-          date: new Date(dayDate),
-          label: dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          x: i * pixelsPerDay,
-          width: pixelsPerDay,
-        });
-      }
+  for (let i = 0; i < days; i++) {
+    const dayDate = new Date(current);
+    dayDate.setDate(start.getDate() + i);
+    
+    // Format: Just the day number
+    const dayNumber = dayDate.getDate();
+    
+    headers.push({
+      date: new Date(dayDate),
+      label: `${dayNumber}`,
+      x: i * pixelsPerDay,
+      width: pixelsPerDay,
+    });
   }
 
   return headers;

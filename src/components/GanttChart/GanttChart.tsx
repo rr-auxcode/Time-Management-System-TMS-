@@ -70,22 +70,28 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         <div className="gantt-sidebar-header">
           <h3>Tasks</h3>
         </div>
-        <div className="gantt-timeline-header" ref={timelineRef}>
-          <div className="timeline-headers-container" style={{ width: `${timelineWidth}px` }}>
-            {timelineHeaders.map((header, index) => (
-              <div
-                key={index}
-                className="timeline-header-cell"
-                style={{
-                  left: `${header.x}px`,
-                  width: `${header.width}px`,
-                }}
-              >
-                {header.label}
-              </div>
-            ))}
+          <div className="gantt-timeline-header" ref={timelineRef}>
+            <div className="timeline-headers-container" style={{ width: `${timelineWidth}px` }}>
+              {timelineHeaders.map((header, index) => {
+                // Check if day is weekend (Saturday = 6, Sunday = 0)
+                const dayOfWeek = header.date.getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                
+                return (
+                  <div
+                    key={index}
+                    className={`timeline-header-cell ${isWeekend ? 'weekend' : ''}`}
+                    style={{
+                      left: `${header.x}px`,
+                      width: `${header.width}px`,
+                    }}
+                  >
+                    {header.label}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
       </div>
       <div className="gantt-body">
         <div className="gantt-sidebar">
@@ -113,19 +119,42 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             </div>
           ))}
         </div>
-        <div className="gantt-timeline" style={{ width: `${timelineWidth}px` }}>
-          {taskPositions.map((position) => (
-            <div
-              key={position.task.id}
-              className="gantt-task-bar-wrapper"
-              style={{
-                position: 'absolute',
-                top: `${position.y}px`,
-                left: `${position.x}px`,
-                width: `${position.width}px`,
-                height: `${position.height}px`,
-              }}
-            >
+            <div className="gantt-timeline" style={{ width: `${timelineWidth}px` }}>
+              {/* Weekend background columns */}
+              {timelineHeaders.map((header, index) => {
+                const dayOfWeek = header.date.getDay();
+                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                if (!isWeekend) return null;
+                
+                return (
+                  <div
+                    key={`weekend-bg-${index}`}
+                    className="weekend-background"
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: `${header.x}px`,
+                      width: `${header.width}px`,
+                      height: '100%',
+                      backgroundColor: '#f9fafb',
+                      zIndex: 0,
+                    }}
+                  />
+                );
+              })}
+              {taskPositions.map((position) => (
+                <div
+                  key={position.task.id}
+                  className="gantt-task-bar-wrapper"
+                  style={{
+                    position: 'absolute',
+                    top: `${position.y}px`,
+                    left: `${position.x}px`,
+                    width: `${position.width}px`,
+                    height: `${position.height}px`,
+                    zIndex: 1,
+                  }}
+                >
               <div
                 className={`gantt-task-bar status-${position.task.status}`}
                 style={{
