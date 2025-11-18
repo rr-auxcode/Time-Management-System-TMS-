@@ -7,11 +7,13 @@ import { ProjectForm } from './components/ProjectForm/ProjectForm';
 import { TaskForm } from './components/TaskForm/TaskForm';
 import { HoursReport } from './components/HoursReport/HoursReport';
 import { Login } from './components/Login/Login';
+import { Notification } from './components/Notification/Notification';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProjectProvider, useProjects } from './context/ProjectContext';
 import { Project, TimelineView, Task } from './types';
 import { PersonHoursReport } from './utils/hoursReport';
 import { generateHoursReports, formatReportHTML } from './utils/hoursReport';
+import { supabase } from './lib/supabase';
 import './App.css';
 
 function AppContent() {
@@ -110,14 +112,101 @@ function MainApp() {
 
   // View change handler removed - always showing current month's days
 
-  const handleGenerateHoursReport = () => {
+  const handleGenerateHoursReport = async () => {
     const reports = generateHoursReports(projects);
     if (reports.length === 0) {
-      alert('No tasks with valid email assignees found. Please add email addresses to tasks first.');
+      // Provide more helpful error message
+      const tasksWithAssignees = projects.flatMap(p => p.tasks).filter(t => t.assignee && t.assignee.trim() !== '');
+      const tasksWithTimeEntries = projects.flatMap(p => p.tasks).filter(t => {
+        const entries = t.timeEntries || [];
+        const totalHours = entries.reduce((sum, entry) => sum + (typeof entry.hours === 'number' ? entry.hours : 0), 0);
+        return totalHours > 0;
+      });
+
+      let message = 'No tasks with valid email assignees and time entries found.\n\n';
+      
+      if (tasksWithAssignees.length === 0) {
+        message += '• No tasks have assignees. Please add email addresses to tasks.\n';
+      } else {
+        message += `• Found ${tasksWithAssignees.length} task(s) with assignees.\n`;
+      }
+
+      if (tasksWithTimeEntries.length === 0) {
+        message += '• No tasks have time entries with hours > 0. Please add time entries to tasks.\n';
+      } else {
+        message += `• Found ${tasksWithTimeEntries.length} task(s) with time entries.\n`;
+      }
+
+      message += '\nCheck the browser console for detailed debug information.';
+
+      alert(message);
+      console.log('Projects:', projects);
+      console.log('Tasks with assignees:', tasksWithAssignees);
+      console.log('Tasks with time entries:', tasksWithTimeEntries);
       return;
     }
-    setHoursReports(reports);
-    setIsReportModalOpen(true);
+
+    // Store reports in database for each user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert('You must be logged in to send reports.');
+      return;
+    }
+
+    try {
+      // Serialize Date objects in report_data to ISO strings for JSONB storage
+      const reportsToInsert = reports.map((report) => {
+        // Serialize the report data, converting Date objects to ISO strings
+        const serializedReport = {
+          email: report.email,
+          name: report.name,
+          totalHours: report.totalHours,
+          taskCount: report.taskCount,
+          tasks: report.tasks.map(task => ({
+            taskName: task.taskName,
+            projectName: task.projectName,
+            hours: task.hours,
+            timeEntries: task.timeEntries.map(entry => ({
+              date: entry.date instanceof Date 
+                ? entry.date.toISOString() 
+                : (typeof entry.date === 'string' ? entry.date : new Date(entry.date).toISOString()),
+              hours: entry.hours,
+            })),
+          })),
+        };
+
+        return {
+          user_id: user.id,
+          recipient_email: report.email,
+          recipient_name: report.name,
+          report_data: serializedReport,
+          status: 'pending',
+        };
+      });
+
+      const { data, error } = await supabase.from('reports').insert(reportsToInsert).select();
+
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw new Error(`Database error: ${error.message} (Code: ${error.code})`);
+      }
+
+      console.log('Successfully inserted reports:', data);
+
+      alert(`Successfully sent ${reports.length} report${reports.length > 1 ? 's' : ''} to users. They will receive notifications in their app.`);
+      
+      // Also show in modal for viewing/sending via email if needed
+      setHoursReports(reports);
+      setIsReportModalOpen(true);
+    } catch (error) {
+      console.error('Error sending reports:', error);
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : (typeof error === 'object' && error !== null && 'message' in error 
+          ? String(error.message) 
+          : 'Unknown error');
+      alert(`Failed to send reports: ${errorMessage}\n\nCheck the browser console for more details.`);
+    }
   };
 
   const handleSendEmails = async (reportsToSend: PersonHoursReport[]) => {
@@ -196,6 +285,7 @@ function MainApp() {
   return (
     <div className="app">
       <Header />
+      <Notification />
       {error && (
         <div style={{ padding: '1rem', background: '#fee2e2', color: '#991b1b', textAlign: 'center' }}>
           Error: {error}

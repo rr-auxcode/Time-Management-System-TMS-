@@ -423,7 +423,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         name: taskData.name,
         description: taskData.description || null,
         start_date: dateToISO(taskData.startDate),
-        end_date: taskData.endDate ? dateToISO(taskData.endDate) : null,
+        end_date: taskData.endDate !== undefined && taskData.endDate !== null ? dateToISO(taskData.endDate) : null,
         estimated_hours: taskData.estimatedHours || null,
         status: taskData.status,
         assignee: taskData.assignee || null,

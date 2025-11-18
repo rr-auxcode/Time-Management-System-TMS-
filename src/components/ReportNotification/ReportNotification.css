@@ -1,0 +1,185 @@
+.report-notification {
+  display: flex;
+  flex-direction: column;
+  max-width: 500px;
+  background: white;
+}
+
+.report-notification-header {
+  padding: 1rem;
+  background: #fff7ed;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.report-summary h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.report-email {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.report-totals {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.total-hours {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #f97316;
+}
+
+.task-count {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.report-notification-body {
+  padding: 1rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.report-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.report-task-item {
+  padding: 0.75rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.task-name {
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.875rem;
+}
+
+.task-hours {
+  font-weight: 700;
+  color: #f97316;
+  font-size: 0.875rem;
+}
+
+.task-project {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.task-time-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.time-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.entry-date {
+  color: #374151;
+}
+
+.entry-hours {
+  font-weight: 600;
+  color: #f97316;
+}
+
+.report-notification-actions {
+  padding: 1rem;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.btn-view-report {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-view-report:hover {
+  background: #e5e7eb;
+}
+
+.approval-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-reject,
+.btn-approve {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-reject {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.btn-reject:hover {
+  background: #fecaca;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(239, 68, 68, 0.2);
+}
+
+.btn-approve {
+  background: #f97316;
+  color: white;
+}
+
+.btn-approve:hover {
+  background: #ea580c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(249, 115, 22, 0.3);
+}
+
+.btn-approve:disabled,
+.btn-reject:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
