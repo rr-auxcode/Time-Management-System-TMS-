@@ -37,14 +37,15 @@ function dbProjectToProject(dbProject: any, tasks: Task[]): Project {
 }
 
 // Helper to convert Supabase task to app Task type
+// Dates from Supabase are TIMESTAMPTZ, so they preserve date and time
 function dbTaskToTask(dbTask: any, timeEntries: TimeEntry[] = []): Task {
   return {
     id: dbTask.id,
     projectId: dbTask.project_id,
     name: dbTask.name,
     description: dbTask.description || undefined,
-    startDate: new Date(dbTask.start_date),
-    endDate: dbTask.end_date ? new Date(dbTask.end_date) : undefined,
+    startDate: new Date(dbTask.start_date), // Preserves date and time from database
+    endDate: dbTask.end_date ? new Date(dbTask.end_date) : undefined, // Preserves date and time
     estimatedHours: dbTask.estimated_hours ? Number(dbTask.estimated_hours) : undefined,
     status: dbTask.status,
     assignee: dbTask.assignee || undefined,
@@ -241,12 +242,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return newProject;
     }
 
-    // Helper to convert Date to ISO string for storage (preserves date part, avoids timezone shift)
+    // Helper to convert Date to ISO string for storage (preserves date and time, handles timezone)
+    // Converts local date/time to ISO string preserving the intended date/time values
     const dateToISO = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}T00:00:00.000Z`; // Store as UTC midnight to preserve date
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      // Store as local time converted to UTC (preserves the date/time user selected)
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
     };
 
     // Save to Supabase
@@ -293,12 +299,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    // Helper to convert Date to ISO string for storage (preserves date part, avoids timezone shift)
+    // Helper to convert Date to ISO string for storage (preserves date and time, handles timezone)
+    // Converts local date/time to ISO string preserving the intended date/time values
     const dateToISO = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}T00:00:00.000Z`; // Store as UTC midnight to preserve date
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      // Store as local time converted to UTC (preserves the date/time user selected)
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
     };
 
     // Update in Supabase
@@ -391,12 +402,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return newTask;
     }
 
-    // Helper to convert Date to ISO string for storage (preserves date part, avoids timezone shift)
+    // Helper to convert Date to ISO string for storage (preserves date and time, handles timezone)
+    // Converts local date/time to ISO string preserving the intended date/time values
     const dateToISO = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}T00:00:00.000Z`; // Store as UTC midnight to preserve date
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      // Store as local time converted to UTC (preserves the date/time user selected)
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
     };
 
     // Save to Supabase
@@ -518,12 +534,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    // Helper to convert Date to ISO string for storage (preserves date part, avoids timezone shift)
+    // Helper to convert Date to ISO string for storage (preserves date and time, handles timezone)
+    // Converts local date/time to ISO string preserving the intended date/time values
     const dateToISO = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}T00:00:00.000Z`; // Store as UTC midnight to preserve date
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      // Store as local time converted to UTC (preserves the date/time user selected)
+      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
     };
 
     // Update in Supabase

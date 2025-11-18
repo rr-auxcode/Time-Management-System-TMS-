@@ -17,30 +17,56 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
   const [status, setStatus] = useState<'active' | 'completed' | 'cancelled' | 'on-hold'>('active');
   const [color, setColor] = useState('#f97316');
 
+  // Helper to format Date to YYYY-MM-DDTHH:MM format
+  const formatDateTime = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   useEffect(() => {
     if (project) {
       setName(project.name);
       setDescription(project.description || '');
-      setStartDate(project.startDate.toISOString().split('T')[0]);
-      setEndDate(project.endDate.toISOString().split('T')[0]);
+      // Format with time included (HH:MM)
+      setStartDate(formatDateTime(project.startDate));
+      setEndDate(formatDateTime(project.endDate));
       setStatus(project.status);
       setColor(project.color || '#f97316');
     } else {
-      // Default to today and 30 days from now
-      const today = new Date();
+      // Default to today and 30 days from now (with current hour)
+      const now = new Date();
       const future = new Date();
       future.setDate(future.getDate() + 30);
-      setStartDate(today.toISOString().split('T')[0]);
-      setEndDate(future.toISOString().split('T')[0]);
+      future.setHours(now.getHours(), 0, 0, 0);
+      setStartDate(formatDateTime(now));
+      setEndDate(formatDateTime(future));
     }
   }, [project]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Convert YYYY-MM-DD strings to Date objects (local time, not UTC)
-    // Add 'T00:00:00' to ensure date is interpreted as local midnight, not UTC
-    const startDateObj = startDate ? new Date(startDate + 'T00:00:00') : new Date();
-    const endDateObj = endDate ? new Date(endDate + 'T00:00:00') : new Date();
+    // Convert YYYY-MM-DDTHH:MM strings to Date objects
+    // DatePicker returns YYYY-MM-DDTHH:MM format when includeTime=true
+    const parseDateTime = (dateTimeString: string): Date => {
+      if (!dateTimeString) return new Date();
+      // If already includes time, use as-is; otherwise add default time
+      if (dateTimeString.includes('T')) {
+        // Ensure we have seconds for proper parsing
+        const parts = dateTimeString.split('T');
+        const timePart = parts[1] || '00:00';
+        const timeParts = timePart.split(':');
+        const seconds = timeParts.length >= 3 ? timeParts[2] : '00';
+        return new Date(`${parts[0]}T${timeParts[0]}:${timeParts[1] || '00'}:${seconds}`);
+      }
+      return new Date(dateTimeString + 'T00:00:00');
+    };
+
+    const startDateObj = parseDateTime(startDate);
+    const endDateObj = parseDateTime(endDate);
     
     onSubmit({
       name,
@@ -85,6 +111,8 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
                 value={startDate}
                 onChange={(date) => setStartDate(date)}
                 max={endDate}
+                includeTime={true}
+                timeLabel="Start Hour"
                 required
                 placeholder="Select start date"
                 locale={navigator.language || 'en-US'}
@@ -98,6 +126,8 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
                 value={endDate}
                 onChange={(date) => setEndDate(date)}
                 min={startDate}
+                includeTime={true}
+                timeLabel="End Hour"
                 required
                 placeholder="Select end date"
                 locale={navigator.language || 'en-US'}

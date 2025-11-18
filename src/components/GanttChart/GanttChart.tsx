@@ -100,11 +100,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               </div>
               {task.endDate ? (
                 <div className="task-dates" style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '0.125rem' }}>
-                  {task.startDate.toLocaleDateString()} - {task.endDate.toLocaleDateString()}
+                  {task.startDate.toLocaleDateString()} {task.startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} - {task.endDate.toLocaleDateString()} {task.endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </div>
               ) : (
                 <div className="task-dates" style={{ fontSize: '0.7rem', color: '#6b7280', fontStyle: 'italic', marginTop: '0.125rem' }}>
-                  {task.startDate.toLocaleDateString()} - No end date
+                  {task.startDate.toLocaleDateString()} {task.startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} - No end date
                 </div>
               )}
               {task.assignee && (

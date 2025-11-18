@@ -244,6 +244,87 @@
   opacity: 1;
 }
 
+.datepicker-time-wrapper {
+  margin-top: 0.5rem;
+}
+
+.datepicker-time-selection {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.datepicker-hour-input {
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: border-color 0.2s ease;
+}
+
+.datepicker-hour-input:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+.datepicker-hour-input:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.datepicker-hour-slider {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e7eb;
+  outline: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.datepicker-hour-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f97316;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.datepicker-hour-slider::-webkit-slider-thumb:hover {
+  background: #ea580c;
+}
+
+.datepicker-hour-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f97316;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease;
+}
+
+.datepicker-hour-slider::-moz-range-thumb:hover {
+  background: #ea580c;
+}
+
+.datepicker-hour-slider:focus {
+  outline: none;
+}
+
+.datepicker-hour-slider:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+}
+
+.datepicker-hour-slider:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+}
+
 /* Screen reader only text */
 .sr-only {
   position: absolute;
