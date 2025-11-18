@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Project } from '../../types';
+import { DatePicker } from '../DatePicker/DatePicker';
 import './ProjectForm.css';
 
 interface ProjectFormProps {
@@ -36,11 +37,16 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Convert YYYY-MM-DD strings to Date objects (local time, not UTC)
+    // Add 'T00:00:00' to ensure date is interpreted as local midnight, not UTC
+    const startDateObj = startDate ? new Date(startDate + 'T00:00:00') : new Date();
+    const endDateObj = endDate ? new Date(endDate + 'T00:00:00') : new Date();
+    
     onSubmit({
       name,
       description,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
+      startDate: startDateObj,
+      endDate: endDateObj,
       status,
       color,
     });
@@ -71,29 +77,33 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
         />
       </div>
 
-      <div className="form-row">
-        <div className="form-group">
-          <label htmlFor="startDate">Start Date *</label>
-          <input
-            id="startDate"
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            required
-          />
-        </div>
+          <div className="form-row">
+            <div className="form-group">
+              <DatePicker
+                id="startDate"
+                label="Start Date"
+                value={startDate}
+                onChange={(date) => setStartDate(date)}
+                max={endDate}
+                required
+                placeholder="Select start date"
+                locale={navigator.language || 'en-US'}
+              />
+            </div>
 
-        <div className="form-group">
-          <label htmlFor="endDate">End Date *</label>
-          <input
-            id="endDate"
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            required
-          />
-        </div>
-      </div>
+            <div className="form-group">
+              <DatePicker
+                id="endDate"
+                label="End Date"
+                value={endDate}
+                onChange={(date) => setEndDate(date)}
+                min={startDate}
+                required
+                placeholder="Select end date"
+                locale={navigator.language || 'en-US'}
+              />
+            </div>
+          </div>
 
       <div className="form-row">
         <div className="form-group">

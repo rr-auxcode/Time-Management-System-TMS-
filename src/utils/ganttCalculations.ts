@@ -68,13 +68,27 @@ export const calculateTaskPosition = (
   rowIndex: number,
   rowHeight: number = 60
 ): GanttBarPosition | null => {
-  // Check if task overlaps with timeline
-  if (task.endDate < timelineStart || task.startDate > timelineEnd) {
-    return null;
+  // For tasks without an end date, calculate a default duration
+  // Use estimated hours if available (assume 8 hours per day), or default to 7 days
+  let effectiveEndDate: Date;
+  if (task.endDate) {
+    effectiveEndDate = task.endDate;
+  } else {
+    // Calculate end date based on estimated hours or default duration
+    const defaultDays = task.estimatedHours 
+      ? Math.ceil(task.estimatedHours / 8) // Assume 8 hours per day
+      : 7; // Default to 7 days if no estimate
+    effectiveEndDate = new Date(task.startDate);
+    effectiveEndDate.setDate(effectiveEndDate.getDate() + defaultDays);
   }
 
   const taskStart = task.startDate > timelineStart ? task.startDate : timelineStart;
-  const taskEnd = task.endDate < timelineEnd ? task.endDate : timelineEnd;
+  const taskEnd = effectiveEndDate < timelineEnd ? effectiveEndDate : timelineEnd;
+
+  // Check if task overlaps with timeline
+  if (effectiveEndDate < timelineStart || task.startDate > timelineEnd) {
+    return null;
+  }
 
   const daysFromStart = getDaysBetween(timelineStart, taskStart);
   const taskDuration = getDaysBetween(taskStart, taskEnd);

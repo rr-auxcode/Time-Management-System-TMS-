@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Project, Task } from '../types';
+import { Project, Task,  TimeEntry } from '../types';
 import { supabase } from '../lib/supabase';
 import { migrateLocalStorageToSupabase, isMigrationComplete, hasLocalStorageData } from '../utils/dataMigration';
 
@@ -37,20 +37,20 @@ function dbProjectToProject(dbProject: any, tasks: Task[]): Project {
 }
 
 // Helper to convert Supabase task to app Task type
-function dbTaskToTask(dbTask: any): Task {
+function dbTaskToTask(dbTask: any, timeEntries: TimeEntry[] = []): Task {
   return {
     id: dbTask.id,
     projectId: dbTask.project_id,
     name: dbTask.name,
     description: dbTask.description || undefined,
     startDate: new Date(dbTask.start_date),
-    endDate: new Date(dbTask.end_date),
-    hoursSpent: Number(dbTask.hours_spent),
+    endDate: dbTask.end_date ? new Date(dbTask.end_date) : undefined,
     estimatedHours: dbTask.estimated_hours ? Number(dbTask.estimated_hours) : undefined,
     status: dbTask.status,
     assignee: dbTask.assignee || undefined,
     color: dbTask.color || undefined,
     dependencies: dbTask.dependencies || undefined,
+    timeEntries: timeEntries.length > 0 ? timeEntries : undefined,
   };
 }
 
@@ -111,16 +111,47 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .from('tasks')
         .select('*')
         .in('project_id', projectIds)
-        .order('created_at', { ascending: true });
+        .order('start_date', { ascending: true })
+        .order('end_date', { ascending: true, nullsFirst: false }); // Sort by start date, then end date (tasks without end date come after)
 
       if (tasksError) {
         throw tasksError;
       }
 
+      // Load all time entries for all tasks
+      const taskIds = (tasksData || []).map((t: any) => t.id);
+      const { data: timeEntriesData, error: timeEntriesError } = await supabase
+        .from('time_entries')
+        .select('*')
+        .in('task_id', taskIds.length > 0 ? taskIds : ['00000000-0000-0000-0000-000000000000'])
+        .order('date', { ascending: false });
+
+      if (timeEntriesError) {
+        console.warn('Error loading time entries:', timeEntriesError);
+      }
+
+      // Group time entries by task
+      const timeEntriesByTask = new Map<string, TimeEntry[]>();
+      (timeEntriesData || []).forEach((dbEntry: any) => {
+        const entry: TimeEntry = {
+          id: dbEntry.id,
+          taskId: dbEntry.task_id,
+          date: new Date(dbEntry.date),
+          hours: Number(dbEntry.hours),
+          notes: dbEntry.notes || undefined,
+          createdAt: dbEntry.created_at ? new Date(dbEntry.created_at) : undefined,
+        };
+        if (!timeEntriesByTask.has(entry.taskId)) {
+          timeEntriesByTask.set(entry.taskId, []);
+        }
+        timeEntriesByTask.get(entry.taskId)!.push(entry);
+      });
+
       // Group tasks by project
       const tasksByProject = new Map<string, Task[]>();
       (tasksData || []).forEach((dbTask: any) => {
-        const task = dbTaskToTask(dbTask);
+        const timeEntries = timeEntriesByTask.get(dbTask.id) || [];
+        const task = dbTaskToTask(dbTask, timeEntries);
         if (!tasksByProject.has(task.projectId)) {
           tasksByProject.set(task.projectId, []);
         }
@@ -159,9 +190,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           tasks: project.tasks.map((task: any) => ({
             ...task,
             startDate: new Date(task.startDate),
-            endDate: new Date(task.endDate),
-            hoursSpent: task.hoursSpent ?? 0,
+            endDate: task.endDate ? new Date(task.endDate) : undefined,
             estimatedHours: task.estimatedHours,
+            timeEntries: (task.timeEntries || []).map((entry: any) => ({
+              ...entry,
+              date: new Date(entry.date),
+              createdAt: entry.createdAt ? new Date(entry.createdAt) : undefined,
+            })),
           })),
         }));
         setProjects(projectsWithDates);
@@ -348,8 +383,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         name: taskData.name,
         description: taskData.description || null,
         start_date: taskData.startDate.toISOString(),
-        end_date: taskData.endDate.toISOString(),
-        hours_spent: taskData.hoursSpent,
+        end_date: taskData.endDate ? taskData.endDate.toISOString() : null,
         estimated_hours: taskData.estimatedHours || null,
         status: taskData.status,
         assignee: taskData.assignee || null,
@@ -363,7 +397,42 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error(`Failed to create task: ${insertError.message}`);
     }
 
-    const newTask = dbTaskToTask(insertedTask);
+    // Save time entries if provided
+    const timeEntries = taskData.timeEntries || [];
+    if (timeEntries.length > 0) {
+      const timeEntriesToInsert = timeEntries.map(entry => ({
+        task_id: insertedTask.id,
+        date: entry.date instanceof Date ? entry.date.toISOString().split('T')[0] : entry.date,
+        hours: entry.hours,
+        notes: entry.notes || null,
+      }));
+
+      const { error: timeEntriesError } = await supabase
+        .from('time_entries')
+        .insert(timeEntriesToInsert);
+
+      if (timeEntriesError) {
+        console.warn('Error saving time entries:', timeEntriesError);
+      }
+    }
+
+    // Reload time entries for the new task
+    const { data: loadedTimeEntries } = await supabase
+      .from('time_entries')
+      .select('*')
+      .eq('task_id', insertedTask.id)
+      .order('date', { ascending: false });
+
+    const timeEntriesList = (loadedTimeEntries || []).map((dbEntry: any) => ({
+      id: dbEntry.id,
+      taskId: dbEntry.task_id,
+      date: new Date(dbEntry.date),
+      hours: Number(dbEntry.hours),
+      notes: dbEntry.notes || undefined,
+      createdAt: dbEntry.created_at ? new Date(dbEntry.created_at) : undefined,
+    }));
+
+    const newTask = dbTaskToTask(insertedTask, timeEntriesList);
     
     // Update local state
     setProjects((prev) =>
@@ -418,13 +487,43 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.description !== undefined) updateData.description = updates.description || null;
     if (updates.startDate !== undefined) updateData.start_date = updates.startDate.toISOString();
-    if (updates.endDate !== undefined) updateData.end_date = updates.endDate.toISOString();
-    if (updates.hoursSpent !== undefined) updateData.hours_spent = updates.hoursSpent;
+    if (updates.endDate !== undefined) updateData.end_date = updates.endDate ? updates.endDate.toISOString() : null;
     if (updates.estimatedHours !== undefined) updateData.estimated_hours = updates.estimatedHours || null;
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.assignee !== undefined) updateData.assignee = updates.assignee || null;
     if (updates.color !== undefined) updateData.color = updates.color || null;
     if (updates.dependencies !== undefined) updateData.dependencies = updates.dependencies || null;
+
+    // Handle time entries update if provided
+    if (updates.timeEntries !== undefined) {
+      // Delete existing time entries
+      const { error: deleteError } = await supabase
+        .from('time_entries')
+        .delete()
+        .eq('task_id', taskId);
+
+      if (deleteError) {
+        console.warn('Error deleting old time entries:', deleteError);
+      }
+
+      // Insert new time entries
+      if (updates.timeEntries.length > 0) {
+        const timeEntriesToInsert = updates.timeEntries.map(entry => ({
+          task_id: taskId,
+          date: entry.date instanceof Date ? entry.date.toISOString().split('T')[0] : entry.date,
+          hours: entry.hours,
+          notes: entry.notes || null,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('time_entries')
+          .insert(timeEntriesToInsert);
+
+        if (insertError) {
+          console.warn('Error inserting time entries:', insertError);
+        }
+      }
+    }
 
     const { error: updateError } = await supabase
       .from('tasks')

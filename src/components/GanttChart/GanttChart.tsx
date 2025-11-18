@@ -95,9 +95,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 {task.name}
               </div>
               <div className="task-hours">
-                {task.hoursSpent}h
+                {task.timeEntries ? task.timeEntries.reduce((sum, entry) => sum + entry.hours, 0) : 0}h
                 {task.estimatedHours && ` / ${task.estimatedHours}h`}
               </div>
+              {task.endDate ? (
+                <div className="task-dates" style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '0.125rem' }}>
+                  {task.startDate.toLocaleDateString()} - {task.endDate.toLocaleDateString()}
+                </div>
+              ) : (
+                <div className="task-dates" style={{ fontSize: '0.7rem', color: '#6b7280', fontStyle: 'italic', marginTop: '0.125rem' }}>
+                  {task.startDate.toLocaleDateString()} - No end date
+                </div>
+              )}
               {task.assignee && (
                 <div className="task-assignee">{task.assignee}</div>
               )}
@@ -125,14 +134,14 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   backgroundColor: position.task.color || '#f97316',
                 }}
                 onClick={() => onTaskClick?.(position.task)}
-                title={`${position.task.name} - ${position.task.hoursSpent}h${position.task.estimatedHours ? ` / ${position.task.estimatedHours}h` : ''}`}
+                title={`${position.task.name} - ${position.task.timeEntries ? position.task.timeEntries.reduce((sum, entry) => sum + entry.hours, 0) : 0}h${position.task.estimatedHours ? ` / ${position.task.estimatedHours}h` : ''}${!position.task.endDate ? ' (No end date)' : ''}`}
               >
                 <span className="task-bar-label">{position.task.name}</span>
-                {position.task.estimatedHours && position.task.estimatedHours > 0 && (
+                {position.task.estimatedHours && position.task.estimatedHours > 0 && position.task.timeEntries && (
                   <div
                     className="task-progress"
                     style={{
-                      width: `${Math.min((position.task.hoursSpent / position.task.estimatedHours) * 100, 100)}%`,
+                      width: `${Math.min((position.task.timeEntries.reduce((sum, entry) => sum + entry.hours, 0) / position.task.estimatedHours) * 100, 100)}%`,
                     }}
                   />
                 )}

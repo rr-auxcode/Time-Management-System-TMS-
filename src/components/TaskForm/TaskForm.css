@@ -145,3 +145,23 @@
   background: #e5e7eb;
 }
 
+.time-entries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.time-entry-item {
+  padding: 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.time-entry-item:hover {
+  border-color: #f97316;
+  background: #fff7ed;
+}
+
