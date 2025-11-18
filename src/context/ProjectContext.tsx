@@ -241,6 +241,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return newProject;
     }
 
+    // Helper to convert Date to ISO string for storage (preserves date part, avoids timezone shift)
+    const dateToISO = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}T00:00:00.000Z`; // Store as UTC midnight to preserve date
+    };
+
     // Save to Supabase
     const { data: insertedProject, error: insertError } = await supabase
       .from('projects')
@@ -248,8 +256,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         user_id: user.id,
         name: projectData.name,
         description: projectData.description || null,
-        start_date: projectData.startDate.toISOString(),
-        end_date: projectData.endDate.toISOString(),
+        start_date: dateToISO(projectData.startDate),
+        end_date: dateToISO(projectData.endDate),
         status: projectData.status,
         color: projectData.color || null,
       })
@@ -285,12 +293,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
+    // Helper to convert Date to ISO string for storage (preserves date part, avoids timezone shift)
+    const dateToISO = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}T00:00:00.000Z`; // Store as UTC midnight to preserve date
+    };
+
     // Update in Supabase
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.description !== undefined) updateData.description = updates.description || null;
-    if (updates.startDate !== undefined) updateData.start_date = updates.startDate.toISOString();
-    if (updates.endDate !== undefined) updateData.end_date = updates.endDate.toISOString();
+    if (updates.startDate !== undefined) updateData.start_date = dateToISO(updates.startDate);
+    if (updates.endDate !== undefined) updateData.end_date = dateToISO(updates.endDate);
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.color !== undefined) updateData.color = updates.color || null;
 
@@ -375,6 +391,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return newTask;
     }
 
+    // Helper to convert Date to ISO string for storage (preserves date part, avoids timezone shift)
+    const dateToISO = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}T00:00:00.000Z`; // Store as UTC midnight to preserve date
+    };
+
     // Save to Supabase
     const { data: insertedTask, error: insertError } = await supabase
       .from('tasks')
@@ -382,8 +406,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         project_id: projectId,
         name: taskData.name,
         description: taskData.description || null,
-        start_date: taskData.startDate.toISOString(),
-        end_date: taskData.endDate ? taskData.endDate.toISOString() : null,
+        start_date: dateToISO(taskData.startDate),
+        end_date: taskData.endDate ? dateToISO(taskData.endDate) : null,
         estimated_hours: taskData.estimatedHours || null,
         status: taskData.status,
         assignee: taskData.assignee || null,
@@ -400,9 +424,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Save time entries if provided
     const timeEntries = taskData.timeEntries || [];
     if (timeEntries.length > 0) {
+      // Helper to convert Date to date string for time_entries (DATE type)
+      const dateToDateString = (date: Date): string => {
+        if (date instanceof Date) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+        // Already a string in YYYY-MM-DD format
+        return date;
+      };
+
       const timeEntriesToInsert = timeEntries.map(entry => ({
         task_id: insertedTask.id,
-        date: entry.date instanceof Date ? entry.date.toISOString().split('T')[0] : entry.date,
+        date: dateToDateString(entry.date),
         hours: entry.hours,
         notes: entry.notes || null,
       }));
@@ -482,12 +518,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
+    // Helper to convert Date to ISO string for storage (preserves date part, avoids timezone shift)
+    const dateToISO = (date: Date): string => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}T00:00:00.000Z`; // Store as UTC midnight to preserve date
+    };
+
     // Update in Supabase
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.description !== undefined) updateData.description = updates.description || null;
-    if (updates.startDate !== undefined) updateData.start_date = updates.startDate.toISOString();
-    if (updates.endDate !== undefined) updateData.end_date = updates.endDate ? updates.endDate.toISOString() : null;
+    if (updates.startDate !== undefined) updateData.start_date = dateToISO(updates.startDate);
+    if (updates.endDate !== undefined) updateData.end_date = updates.endDate ? dateToISO(updates.endDate) : null;
     if (updates.estimatedHours !== undefined) updateData.estimated_hours = updates.estimatedHours || null;
     if (updates.status !== undefined) updateData.status = updates.status;
     if (updates.assignee !== undefined) updateData.assignee = updates.assignee || null;
@@ -506,11 +550,22 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.warn('Error deleting old time entries:', deleteError);
       }
 
+      // Helper to convert Date to date string for time_entries
+      const dateToDateString = (date: Date | string): string => {
+        if (date instanceof Date) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+        return date; // Already a string in YYYY-MM-DD format
+      };
+
       // Insert new time entries
       if (updates.timeEntries.length > 0) {
         const timeEntriesToInsert = updates.timeEntries.map(entry => ({
           task_id: taskId,
-          date: entry.date instanceof Date ? entry.date.toISOString().split('T')[0] : entry.date,
+          date: dateToDateString(entry.date),
           hours: entry.hours,
           notes: entry.notes || null,
         }));
