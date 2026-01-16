@@ -36,13 +36,13 @@ function AppContent() {
 }
 
 function MainApp() {
+  const { isReportManager } = useAuth();
   const { projects, selectedProject, addProject, updateProject, addTask, updateTask, isLoading, error } = useProjects();
-  // Always show current month's days
   const now = new Date();
   const [view] = useState<TimelineView>({
     type: 'month',
     startDate: new Date(now.getFullYear(), now.getMonth(), 1),
-    endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0), // Last day of current month
+    endDate: new Date(now.getFullYear(), now.getMonth() + 1, 0),
   });
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -51,7 +51,6 @@ function MainApp() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
-  // Filter projects to show only selected one, or show all if none selected
   const displayProjects = selectedProject ? [selectedProject] : projects;
 
   const handleNewProject = () => {
@@ -110,12 +109,14 @@ function MainApp() {
     }
   };
 
-  // View change handler removed - always showing current month's days
-
   const handleGenerateHoursReport = async () => {
+    if (!isReportManager) {
+      alert('You do not have permission to generate reports. Only the report manager can create and send reports.');
+      return;
+    }
+
     const reports = generateHoursReports(projects);
     if (reports.length === 0) {
-      // Provide more helpful error message
       const tasksWithAssignees = projects.flatMap(p => p.tasks).filter(t => t.assignee && t.assignee.trim() !== '');
       const tasksWithTimeEntries = projects.flatMap(p => p.tasks).filter(t => {
         const entries = t.timeEntries || [];
@@ -146,7 +147,6 @@ function MainApp() {
       return;
     }
 
-    // Store reports in database for each user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       alert('You must be logged in to send reports.');
@@ -154,9 +154,7 @@ function MainApp() {
     }
 
     try {
-      // Serialize Date objects in report_data to ISO strings for JSONB storage
       const reportsToInsert = reports.map((report) => {
-        // Serialize the report data, converting Date objects to ISO strings
         const serializedReport = {
           email: report.email,
           name: report.name,
@@ -195,7 +193,6 @@ function MainApp() {
 
       alert(`Successfully sent ${reports.length} report${reports.length > 1 ? 's' : ''} to users. They will receive notifications in their app.`);
       
-      // Also show in modal for viewing/sending via email if needed
       setHoursReports(reports);
       setIsReportModalOpen(true);
     } catch (error) {
@@ -210,7 +207,11 @@ function MainApp() {
   };
 
   const handleSendEmails = async (reportsToSend: PersonHoursReport[]) => {
-    // Import EmailJS dynamically
+    if (!isReportManager) {
+      alert('You do not have permission to send reports. Only the report manager can send reports.');
+      return;
+    }
+
     const emailjs = await import('@emailjs/browser');
     
     const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID || 'YOUR_SERVICE_ID';
@@ -247,7 +248,6 @@ function MainApp() {
         failCount++;
         failedEmails.push(report.email);
         
-        // Check if it's an authentication scope error
         if (error?.text?.includes('insufficient authentication scopes') || error?.text?.includes('authentication scopes')) {
           alert(
             `Gmail API authentication error. Please:\n\n` +
@@ -307,9 +307,11 @@ function MainApp() {
               {new Date(view.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </div>
             <div className="action-buttons">
-              <button className="summary-btn" onClick={handleGenerateHoursReport} title="Generate and send hours reports by email">
-                📊 Generate Reports
-              </button>
+              {isReportManager && (
+                <button className="summary-btn" onClick={handleGenerateHoursReport} title="Generate and send hours reports by email">
+                  📊 Generate Reports
+                </button>
+              )}
               {selectedProject && (
                 <button className="add-task-btn" onClick={handleNewTask}>
                   + Add Task

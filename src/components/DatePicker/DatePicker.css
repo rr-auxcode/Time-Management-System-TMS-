@@ -325,7 +325,6 @@
   box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
 }
 
-/* Screen reader only text */
 .sr-only {
   position: absolute;
   width: 1px;

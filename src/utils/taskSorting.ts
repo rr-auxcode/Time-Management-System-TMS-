@@ -1,16 +1,10 @@
 import { Task } from '../types';
 
-/**
- * Sort tasks handling optional end dates
- * Tasks without end dates are sorted to appear after tasks with end dates
- * within the same sort order
- */
 export const sortTasksByDate = (
   tasks: Task[],
   ascending: boolean = true
 ): Task[] => {
   return [...tasks].sort((a, b) => {
-    // Tasks with end dates come first (or last if descending)
     const aHasEndDate = a.endDate !== undefined;
     const bHasEndDate = b.endDate !== undefined;
 
@@ -21,7 +15,6 @@ export const sortTasksByDate = (
       return ascending ? 1 : -1;
     }
 
-    // Both have end dates or both don't - compare by start date
     const aDate = aHasEndDate ? a.endDate! : a.startDate;
     const bDate = bHasEndDate ? b.endDate! : b.startDate;
 
@@ -32,7 +25,6 @@ export const sortTasksByDate = (
       return ascending ? 1 : -1;
     }
 
-    // Same date, sort by start date
     if (a.startDate < b.startDate) {
       return ascending ? -1 : 1;
     }
@@ -44,9 +36,6 @@ export const sortTasksByDate = (
   });
 };
 
-/**
- * Sort tasks by start date only (ignoring end dates)
- */
 export const sortTasksByStartDate = (
   tasks: Task[],
   ascending: boolean = true
@@ -62,9 +51,6 @@ export const sortTasksByStartDate = (
   });
 };
 
-/**
- * Sort tasks by total hours (from time entries)
- */
 export const sortTasksByHours = (
   tasks: Task[],
   ascending: boolean = true

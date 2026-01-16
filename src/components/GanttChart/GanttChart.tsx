@@ -25,23 +25,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const timelineRef = useRef<HTMLDivElement>(null);
   const [timelineWidth, setTimelineWidth] = useState(1000);
 
-  // Get all tasks from all projects
   const allTasks = projects.flatMap((project) => project.tasks);
 
-  // Calculate timeline range
   const { start: timelineStart, end: timelineEnd } = calculateTimelineRange(view);
   const days = getDaysBetween(timelineStart, timelineEnd);
   const pixelsPerDay = getPixelsPerDay(timelineWidth, days);
 
-  // Generate timeline headers
   const timelineHeaders = generateTimelineHeaders(view, timelineWidth);
 
-  // Calculate task positions
   const taskPositions = allTasks
     .map((task, index) => calculateTaskPosition(task, timelineStart, timelineEnd, pixelsPerDay, index))
     .filter((pos): pos is NonNullable<typeof pos> => pos !== null);
 
-  // Update timeline width when container resizes
   useEffect(() => {
     const updateWidth = () => {
       if (timelineRef.current) {
@@ -73,7 +68,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           <div className="gantt-timeline-header" ref={timelineRef}>
             <div className="timeline-headers-container" style={{ width: `${timelineWidth}px` }}>
               {timelineHeaders.map((header, index) => {
-                // Check if day is weekend (Saturday = 6, Sunday = 0)
                 const dayOfWeek = header.date.getDay();
                 const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                 
@@ -120,7 +114,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           ))}
         </div>
             <div className="gantt-timeline" style={{ width: `${timelineWidth}px` }}>
-              {/* Weekend background columns */}
               {timelineHeaders.map((header, index) => {
                 const dayOfWeek = header.date.getDay();
                 const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;

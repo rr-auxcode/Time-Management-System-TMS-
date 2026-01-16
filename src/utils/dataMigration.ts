@@ -1,9 +1,6 @@
 import { Project, Task } from '../types';
 import { supabase } from '../lib/supabase';
 
-/**
- * Migrate projects and tasks from localStorage to Supabase
- */
 export async function migrateLocalStorageToSupabase(): Promise<{
   success: boolean;
   projectsMigrated: number;
@@ -11,7 +8,6 @@ export async function migrateLocalStorageToSupabase(): Promise<{
   error?: string;
 }> {
   try {
-    // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError || !user) {
@@ -23,7 +19,6 @@ export async function migrateLocalStorageToSupabase(): Promise<{
       };
     }
 
-    // Load projects from localStorage
     const stored = localStorage.getItem('tms-projects');
     if (!stored) {
       return {
@@ -35,7 +30,6 @@ export async function migrateLocalStorageToSupabase(): Promise<{
 
     const parsedProjects: Project[] = JSON.parse(stored);
     
-    // Convert date strings to Date objects
     const projectsWithDates = parsedProjects.map((project: any) => ({
       ...project,
       startDate: new Date(project.startDate),
@@ -52,9 +46,7 @@ export async function migrateLocalStorageToSupabase(): Promise<{
     let projectsMigrated = 0;
     let tasksMigrated = 0;
 
-    // Migrate each project
     for (const project of projectsWithDates) {
-      // Insert project
       const { data: insertedProject, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -77,7 +69,6 @@ export async function migrateLocalStorageToSupabase(): Promise<{
 
       projectsMigrated++;
 
-      // Migrate tasks for this project
       if (project.tasks && project.tasks.length > 0) {
         const tasksToInsert = project.tasks.map((task: Task) => ({
           id: task.id,
@@ -106,9 +97,7 @@ export async function migrateLocalStorageToSupabase(): Promise<{
       }
     }
 
-    // Mark migration as complete in localStorage
     localStorage.setItem('tms-migration-complete', 'true');
-    // Optionally, backup the old data before clearing
     localStorage.setItem('tms-projects-backup', stored);
 
     return {
@@ -127,16 +116,10 @@ export async function migrateLocalStorageToSupabase(): Promise<{
   }
 }
 
-/**
- * Check if migration has been completed
- */
 export function isMigrationComplete(): boolean {
   return localStorage.getItem('tms-migration-complete') === 'true';
 }
 
-/**
- * Check if there's data in localStorage that needs migration
- */
 export function hasLocalStorageData(): boolean {
   const stored = localStorage.getItem('tms-projects');
   return !!stored && stored !== '[]';

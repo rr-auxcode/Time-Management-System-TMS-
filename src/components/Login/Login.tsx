@@ -12,7 +12,6 @@ export const Login: React.FC = () => {
     setError(null);
     try {
       await login('google');
-      // The redirect will happen automatically via Supabase
     } catch (err) {
       console.error('Login error:', err);
       setError(err instanceof Error ? err.message : 'Failed to sign in. Please try again.');

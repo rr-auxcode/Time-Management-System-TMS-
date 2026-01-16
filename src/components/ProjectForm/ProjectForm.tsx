@@ -17,7 +17,6 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
   const [status, setStatus] = useState<'active' | 'completed' | 'cancelled' | 'on-hold'>('active');
   const [color, setColor] = useState('#f97316');
 
-  // Helper to format Date to YYYY-MM-DDTHH:MM format
   const formatDateTime = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -31,13 +30,11 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
     if (project) {
       setName(project.name);
       setDescription(project.description || '');
-      // Format with time included (HH:MM)
       setStartDate(formatDateTime(project.startDate));
       setEndDate(formatDateTime(project.endDate));
       setStatus(project.status);
       setColor(project.color || '#f97316');
     } else {
-      // Default to today and 30 days from now (with current hour)
       const now = new Date();
       const future = new Date();
       future.setDate(future.getDate() + 30);
@@ -49,13 +46,9 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Convert YYYY-MM-DDTHH:MM strings to Date objects
-    // DatePicker returns YYYY-MM-DDTHH:MM format when includeTime=true
     const parseDateTime = (dateTimeString: string): Date => {
       if (!dateTimeString) return new Date();
-      // If already includes time, use as-is; otherwise add default time
       if (dateTimeString.includes('T')) {
-        // Ensure we have seconds for proper parsing
         const parts = dateTimeString.split('T');
         const timePart = parts[1] || '00:00';
         const timeParts = timePart.split(':');

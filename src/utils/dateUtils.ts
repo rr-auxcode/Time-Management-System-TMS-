@@ -1,5 +1,3 @@
-// Date utility functions for the Gantt chart
-
 export const formatDate = (date: Date): string => {
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -22,7 +20,7 @@ export const addDays = (date: Date, days: number): Date => {
 export const getWeekStart = (date: Date): Date => {
   const result = new Date(date);
   const day = result.getDay();
-  const diff = result.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+  const diff = result.getDate() - day + (day === 0 ? -6 : 1);
   result.setDate(diff);
   result.setHours(0, 0, 0, 0);
   return result;

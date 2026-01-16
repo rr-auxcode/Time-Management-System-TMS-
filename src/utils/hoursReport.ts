@@ -20,10 +20,8 @@ export const generateHoursReports = (projects: Project[]): PersonHoursReport[] =
   const emailMap = new Map<string, PersonHoursReport>();
   const debugInfo: string[] = [];
 
-  // Collect all tasks with assignees (emails) from all projects
   projects.forEach((project) => {
     project.tasks.forEach((task) => {
-      // Debug: Check if task has assignee
       if (!task.assignee || task.assignee.trim() === '') {
         debugInfo.push(`Task "${task.name}" skipped: No assignee`);
         return;
@@ -31,37 +29,33 @@ export const generateHoursReports = (projects: Project[]): PersonHoursReport[] =
 
       const email = task.assignee.trim().toLowerCase();
       
-      // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         debugInfo.push(`Task "${task.name}" skipped: Invalid email format "${email}"`);
-        return; // Skip invalid emails
+        return;
       }
 
-      // Calculate total hours from time entries
       const timeEntries = task.timeEntries || [];
       
-      // Debug: Check time entries
       if (timeEntries.length === 0) {
         debugInfo.push(`Task "${task.name}" skipped: No time entries`);
         return;
       }
 
       const totalTaskHours = timeEntries.reduce((sum, entry) => {
-        // Handle Date objects and strings
         const hours = typeof entry.hours === 'number' ? entry.hours : 0;
         return sum + hours;
       }, 0);
       
       if (totalTaskHours === 0) {
         debugInfo.push(`Task "${task.name}" skipped: Total hours is 0 (time entries: ${timeEntries.length})`);
-        return; // Skip tasks with no time entries
+        return;
       }
 
       if (!emailMap.has(email)) {
         emailMap.set(email, {
           email,
-          name: email.split('@')[0], // Use email username as default name
+          name: email.split('@')[0],
           totalHours: 0,
           taskCount: 0,
           tasks: [],
@@ -85,12 +79,10 @@ export const generateHoursReports = (projects: Project[]): PersonHoursReport[] =
     });
   });
 
-  // Log debug info if no reports found
   if (emailMap.size === 0 && debugInfo.length > 0) {
     console.log('Report generation debug info:', debugInfo);
   }
 
-  // Convert to array and sort by total hours (descending)
   return Array.from(emailMap.values()).sort((a, b) => b.totalHours - a.totalHours);
 };
 

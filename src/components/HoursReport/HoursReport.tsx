@@ -41,7 +41,6 @@ export const HoursReport: React.FC<HoursReportProps> = ({ reports, onClose, onSe
       await navigator.clipboard.writeText(html);
       alert('Report HTML copied to clipboard! You can paste it into an email or HTML file.');
     } catch (error) {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = html;
       document.body.appendChild(textArea);
@@ -69,7 +68,6 @@ export const HoursReport: React.FC<HoursReportProps> = ({ reports, onClose, onSe
     const html = formatReportHTML(report);
     const plainText = `Hours Report for ${report.name}\n\nTotal Hours: ${report.totalHours}h\nNumber of Tasks: ${report.taskCount}\n\nSee attached HTML file for full details.`;
     
-    // Create mailto link
     const subject = encodeURIComponent(`Your Hours Report - ${report.totalHours}h`);
     const body = encodeURIComponent(plainText);
     window.location.href = `mailto:${report.email}?subject=${subject}&body=${body}`;

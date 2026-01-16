@@ -2,19 +2,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import './DatePicker.css';
 
 interface DatePickerProps {
-  value: string; // YYYY-MM-DD or YYYY-MM-DDTHH:MM format
-  onChange: (date: string) => void; // Returns YYYY-MM-DDTHH:MM format
-  min?: string; // YYYY-MM-DD or YYYY-MM-DDTHH:MM format
-  max?: string; // YYYY-MM-DD or YYYY-MM-DDTHH:MM format
+  value: string;
+  onChange: (date: string) => void;
+  min?: string;
+  max?: string;
   label?: string;
   required?: boolean;
   id?: string;
   placeholder?: string;
   disabled?: boolean;
-  locale?: string; // e.g., 'en-US', 'en-GB', 'de-DE'
+  locale?: string;
   error?: string;
-  includeTime?: boolean; // If true, shows time selection (hours only)
-  timeLabel?: string; // Label for time field
+  includeTime?: boolean;
+  timeLabel?: string;
 }
 
 export const DatePicker: React.FC<DatePickerProps> = ({
@@ -34,14 +34,13 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [displayValue, setDisplayValue] = useState('');
-  const [selectedHour, setSelectedHour] = useState(0); // 0-23
+  const [selectedHour, setSelectedHour] = useState(0);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [focusedDate, setFocusedDate] = useState<Date | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
 
-  // Parse locale to determine date format
   const getDateFormat = (loc: string): 'MM/DD/YYYY' | 'DD/MM/YYYY' | 'YYYY-MM-DD' => {
     if (loc.startsWith('en-GB') || loc.startsWith('de') || loc.startsWith('fr')) {
       return 'DD/MM/YYYY';
@@ -51,26 +50,22 @@ export const DatePicker: React.FC<DatePickerProps> = ({
 
   const dateFormat = getDateFormat(locale);
 
-  // Parse value to extract date and hour
   const parseValue = (val: string): { date: string; hour: number } => {
     if (!val) return { date: '', hour: 0 };
     
-    // Check if value includes time (YYYY-MM-DDTHH:MM or YYYY-MM-DDTHH:MM:SS)
     if (val.includes('T')) {
       const [datePart, timePart] = val.split('T');
       const hour = timePart ? parseInt(timePart.split(':')[0], 10) || 0 : 0;
       return { date: datePart, hour: Math.max(0, Math.min(23, hour)) };
     }
     
-    // Just date, extract hour from date string or default to 0
     return { date: val, hour: 0 };
   };
 
-  // Format date for display based on locale
   const formatDateForDisplay = (dateString: string, hour?: number): string => {
     if (!dateString) return '';
     
-    const date = new Date(dateString + 'T00:00:00'); // Avoid timezone issues
+    const date = new Date(dateString + 'T00:00:00');
     if (isNaN(date.getTime())) return dateString;
 
     let formatted: string;
@@ -88,7 +83,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       formatted = dateString;
     }
 
-    // Add time if included
     if (includeTime && hour !== undefined) {
       const hourStr = String(hour).padStart(2, '0');
       formatted += ` ${hourStr}:00`;
@@ -97,11 +91,9 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     return formatted;
   };
 
-  // Parse display value to YYYY-MM-DD
   const parseDisplayValue = (display: string): string => {
     if (!display) return '';
     
-    // Try DD/MM/YYYY or MM/DD/YYYY format
     const parts = display.split('/');
     if (parts.length === 3) {
       let day: number, month: number, year: number;
@@ -124,7 +116,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
       }
     }
 
-    // Fallback: try to parse as-is (might already be YYYY-MM-DD)
     const date = new Date(display);
     if (!isNaN(date.getTime())) {
       return date.toISOString().split('T')[0];
@@ -133,7 +124,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     return '';
   };
 
-  // Update display value when value prop changes
   useEffect(() => {
     if (value) {
       const { date, hour } = parseValue(value);
@@ -149,7 +139,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     }
   }, [value, dateFormat, includeTime]);
 
-  // Close calendar when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -168,7 +157,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     }
   }, [isOpen]);
 
-  // Handle keyboard navigation
   useEffect(() => {
     if (!isOpen || !calendarRef.current) return;
 
@@ -224,7 +212,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           return;
       }
 
-      // Update current month if needed
       if (newFocusedDate.getMonth() !== currentMonth.getMonth() || 
           newFocusedDate.getFullYear() !== currentMonth.getFullYear()) {
         setCurrentMonth(new Date(newFocusedDate.getFullYear(), newFocusedDate.getMonth(), 1));
@@ -237,19 +224,17 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, focusedDate, currentMonth, value]);
 
-  // Generate calendar days
   const getCalendarDays = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay()); // Start from Sunday
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
 
     const days: Date[] = [];
     const currentDate = new Date(startDate);
 
-    // Generate 42 days (6 weeks)
     for (let i = 0; i < 42; i++) {
       days.push(new Date(currentDate));
       currentDate.setDate(currentDate.getDate() + 1);
@@ -261,13 +246,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const handleDateSelect = (date: Date) => {
     const dateString = date.toISOString().split('T')[0];
     
-    // Validate min/max (compare date part only)
     const minDate = min ? min.split('T')[0] : null;
     const maxDate = max ? max.split('T')[0] : null;
     if (minDate && dateString < minDate) return;
     if (maxDate && dateString > maxDate) return;
 
-    // Combine date with selected hour
     const dateTimeString = includeTime 
       ? `${dateString}T${String(selectedHour).padStart(2, '0')}:00:00`
       : dateString;
@@ -283,7 +266,6 @@ export const DatePicker: React.FC<DatePickerProps> = ({
     const newHour = Math.max(0, Math.min(23, hour));
     setSelectedHour(newHour);
     
-    // Update the value with new hour
     if (value) {
       const { date } = parseValue(value);
       const dateTimeString = `${date}T${String(newHour).padStart(2, '0')}:00:00`;
@@ -294,12 +276,10 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setDisplayValue(newValue);
-    // Don't validate on every keystroke - wait for blur or Enter
   };
 
   const handleInputBlur = () => {
     if (displayValue) {
-      // Extract date part (before space if time is included)
       const datePart = includeTime ? displayValue.split(' ')[0] : displayValue;
       const parsed = parseDisplayValue(datePart);
       if (parsed) {
@@ -316,13 +296,11 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           return;
         }
         
-        // Combine with selected hour if time is included
         const finalValue = includeTime 
           ? `${parsed}T${String(selectedHour).padStart(2, '0')}:00:00`
           : parsed;
         onChange(finalValue);
       } else {
-        // Invalid format, revert to value
         const { date, hour } = parseValue(value || '');
         setDisplayValue(formatDateForDisplay(date, hour));
       }

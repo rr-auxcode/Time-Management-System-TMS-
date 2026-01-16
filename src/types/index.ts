@@ -1,11 +1,9 @@
-// Core types for the Time Management System
-
 export interface TimeEntry {
   id: string;
   taskId: string;
-  date: Date; // Date when work was done
-  hours: number; // Hours worked on this date
-  notes?: string; // Optional notes about what was done
+  date: Date;
+  hours: number;
+  notes?: string;
   createdAt?: Date;
 }
 
@@ -13,15 +11,15 @@ export interface Task {
   id: string;
   name: string;
   description?: string;
-  startDate: Date; // When the task starts
-  endDate?: Date; // Optional end date - tasks can have no end date
-  estimatedHours?: number; // Estimated total hours (optional)
+  startDate: Date;
+  endDate?: Date;
+  estimatedHours?: number;
   status: 'not-started' | 'in-progress' | 'completed' | 'on-hold';
   assignee?: string;
-  dependencies?: string[]; // Array of task IDs this task depends on
+  dependencies?: string[];
   projectId: string;
   color?: string;
-  timeEntries?: TimeEntry[]; // Time entries for this task
+  timeEntries?: TimeEntry[];
 }
 
 export interface Project {
@@ -51,9 +49,9 @@ export interface TimelineView {
 
 export interface GanttBar {
   task: Task;
-  x: number; // Position in pixels
-  width: number; // Width in pixels
-  y: number; // Row position
-  height: number; // Row height
+  x: number;
+  width: number;
+  y: number;
+  height: number;
 }
 

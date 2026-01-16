@@ -1,7 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase configuration
-// Get these from your Supabase project settings: https://supabase.com/dashboard/project/_/settings/api
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
@@ -12,7 +10,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-// Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
@@ -21,7 +18,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 });
 
-// Database types (will be auto-generated later, but defining manually for now)
 export interface Database {
   public: {
     Tables: {

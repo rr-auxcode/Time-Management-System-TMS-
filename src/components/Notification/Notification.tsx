@@ -23,12 +23,10 @@ export const Notification: React.FC = () => {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // Get current user
     supabase.auth.getUser().then(({ data: { user: currentUser } }) => {
       setUser(currentUser);
     });
 
-    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
     });
@@ -42,17 +40,13 @@ export const Notification: React.FC = () => {
     const currentUserEmail = user?.email;
     if (!currentUserEmail) return;
 
-    // Load pending reports for the current user
     const loadNotifications = async () => {
-      // Use RPC or direct query - RLS will handle filtering by email
       const { data, error } = await supabase
         .from('reports')
         .select('*')
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
       
-      // Filter by email on client side as additional check
-      // RLS policy should already filter, but we add this for safety
       const filteredData = data?.filter((report: any) => 
         report.recipient_email?.toLowerCase() === currentUserEmail.toLowerCase()
       );
@@ -62,11 +56,9 @@ export const Notification: React.FC = () => {
         return;
       }
 
-      // Use filtered data if available, otherwise use original data (RLS should handle it)
       const reportsToProcess = filteredData || data || [];
 
       if (reportsToProcess.length > 0) {
-        // Deserialize report_data, converting ISO date strings back to Date objects
         setNotifications(reportsToProcess.map((report: any) => {
           const reportData = report.report_data as any;
           const deserializedReport: PersonHoursReport = {
@@ -97,7 +89,6 @@ export const Notification: React.FC = () => {
 
     loadNotifications();
 
-    // Subscribe to real-time changes
     const channel = supabase
       .channel(`reports-channel-${currentUserEmail}`)
       .on(
@@ -111,7 +102,6 @@ export const Notification: React.FC = () => {
         (payload) => {
           const newReport = payload.new as any;
           if (newReport.status === 'pending') {
-            // Deserialize report_data, converting ISO date strings back to Date objects
             const reportData = newReport.report_data as any;
             const deserializedReport: PersonHoursReport = {
               email: reportData.email,
@@ -151,7 +141,6 @@ export const Notification: React.FC = () => {
         },
         (payload) => {
           const updatedReport = payload.new as any;
-          // Deserialize report_data if it exists
           let deserializedReportData: PersonHoursReport | undefined;
           if (updatedReport.report_data) {
             const reportData = updatedReport.report_data as any;
@@ -195,7 +184,6 @@ export const Notification: React.FC = () => {
   }, [user?.email]);
 
   const handleCloseNotification = async (reportId: string) => {
-    // Remove notification from local state (don't delete from DB, just hide)
     setNotifications((prev) => prev.filter((n) => n.id !== reportId));
     if (expandedNotification === reportId) {
       setExpandedNotification(null);
@@ -221,7 +209,6 @@ export const Notification: React.FC = () => {
       return;
     }
 
-    // Update local state
     setNotifications((prev) =>
       prev.map((n) =>
         n.id === reportId
@@ -235,7 +222,6 @@ export const Notification: React.FC = () => {
       )
     );
 
-    // Close the expanded notification
     setExpandedNotification(null);
   };
 
@@ -258,7 +244,6 @@ export const Notification: React.FC = () => {
       return;
     }
 
-    // Update local state
     setNotifications((prev) =>
       prev.map((n) =>
         n.id === reportId
@@ -272,11 +257,9 @@ export const Notification: React.FC = () => {
       )
     );
 
-    // Close the expanded notification
     setExpandedNotification(null);
   };
 
-  // Only show pending notifications
   const pendingNotifications = notifications.filter((n) => n.status === 'pending');
 
   if (pendingNotifications.length === 0) {

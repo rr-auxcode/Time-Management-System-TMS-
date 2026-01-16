@@ -7,35 +7,39 @@ interface User {
   name: string;
   email: string;
   picture?: string;
+  isReportManager: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isReportManager: boolean;
   login: (provider?: 'google') => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Convert Supabase user to app User type
+const REPORT_MANAGER_EMAIL = 'ff@auxcode.com';
+
 function supabaseUserToUser(supabaseUser: SupabaseUser): User {
+  const email = supabaseUser.email || '';
   return {
     id: supabaseUser.id,
-    name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'User',
-    email: supabaseUser.email || '',
+    name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || email.split('@')[0] || 'User',
+    email: email,
     picture: supabaseUser.user_metadata?.avatar_url || supabaseUser.user_metadata?.picture,
+    isReportManager: email.toLowerCase() === REPORT_MANAGER_EMAIL.toLowerCase(),
   };
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isReportManager = user?.isReportManager ?? false;
 
-  // Check for existing session on mount
   useEffect(() => {
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(supabaseUserToUser(session.user));
@@ -43,7 +47,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(false);
     });
 
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -77,9 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Login error:', error);
         throw error;
       }
-
-      // The redirect will happen automatically, so we don't need to do anything else here
-      // The onAuthStateChange listener will update the user state
     } catch (error) {
       console.error('Failed to login:', error);
       throw error;
@@ -106,6 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         isAuthenticated: !!user,
         isLoading,
+        isReportManager,
         login,
         logout,
       }}

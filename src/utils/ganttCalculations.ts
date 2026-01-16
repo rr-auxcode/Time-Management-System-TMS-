@@ -9,11 +9,10 @@ export interface GanttBarPosition {
 }
 
 export const calculateTimelineRange = (view: TimelineView): { start: Date; end: Date } => {
-  // Always show days of the current month
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   start.setHours(0, 0, 0, 0);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   end.setHours(23, 59, 59, 999);
   
   return { start, end };
@@ -22,7 +21,7 @@ export const calculateTimelineRange = (view: TimelineView): { start: Date; end: 
 export const getWeekStart = (date: Date): Date => {
   const result = new Date(date);
   const day = result.getDay();
-  const diff = result.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const diff = result.getDate() - day + (day === 0 ? -6 : 1);
   result.setDate(diff);
   result.setHours(0, 0, 0, 0);
   return result;
@@ -45,16 +44,13 @@ export const calculateTaskPosition = (
   rowIndex: number,
   rowHeight: number = 60
 ): GanttBarPosition | null => {
-  // For tasks without an end date, calculate a default duration
-  // Use estimated hours if available (assume 8 hours per day), or default to 7 days
   let effectiveEndDate: Date;
   if (task.endDate) {
     effectiveEndDate = task.endDate;
   } else {
-    // Calculate end date based on estimated hours or default duration
     const defaultDays = task.estimatedHours 
-      ? Math.ceil(task.estimatedHours / 8) // Assume 8 hours per day
-      : 7; // Default to 7 days if no estimate
+      ? Math.ceil(task.estimatedHours / 8)
+      : 7;
     effectiveEndDate = new Date(task.startDate);
     effectiveEndDate.setDate(effectiveEndDate.getDate() + defaultDays);
   }
@@ -62,7 +58,6 @@ export const calculateTaskPosition = (
   const taskStart = task.startDate > timelineStart ? task.startDate : timelineStart;
   const taskEnd = effectiveEndDate < timelineEnd ? effectiveEndDate : timelineEnd;
 
-  // Check if task overlaps with timeline
   if (effectiveEndDate < timelineStart || task.startDate > timelineEnd) {
     return null;
   }
@@ -71,14 +66,14 @@ export const calculateTaskPosition = (
   const taskDuration = getDaysBetween(taskStart, taskEnd);
 
   const x = daysFromStart * pixelsPerDay;
-  const width = Math.max(taskDuration * pixelsPerDay, 50); // Minimum width of 50px
+  const width = Math.max(taskDuration * pixelsPerDay, 50);
 
   return {
     task,
     x,
     width,
     y: rowIndex * rowHeight,
-    height: rowHeight - 10, // 10px margin
+    height: rowHeight - 10,
   };
 };
 
@@ -88,7 +83,6 @@ export const generateTimelineHeaders = (view: TimelineView, containerWidth: numb
   const pixelsPerDay = getPixelsPerDay(containerWidth, days);
   const headers: Array<{ date: Date; label: string; x: number; width: number }> = [];
 
-  // Always show individual days of the current month
   const current = new Date(start);
   current.setHours(0, 0, 0, 0);
 
@@ -96,7 +90,6 @@ export const generateTimelineHeaders = (view: TimelineView, containerWidth: numb
     const dayDate = new Date(current);
     dayDate.setDate(start.getDate() + i);
     
-    // Format: Just the day number
     const dayNumber = dayDate.getDate();
     
     headers.push({

@@ -9,7 +9,6 @@ export interface AssigneeSummary {
 export const aggregateHoursByAssignee = (projects: Project[]): AssigneeSummary[] => {
   const assigneeMap = new Map<string, Task[]>();
 
-  // Collect all tasks with assignees from all projects
   projects.forEach((project) => {
     project.tasks.forEach((task) => {
       if (task.assignee && task.assignee.trim() !== '') {
@@ -22,7 +21,6 @@ export const aggregateHoursByAssignee = (projects: Project[]): AssigneeSummary[]
     });
   });
 
-  // Convert to array and calculate totals
   const summaries: AssigneeSummary[] = Array.from(assigneeMap.entries()).map(([assignee, tasks]) => {
     const totalHours = tasks.reduce((sum, task) => sum + task.hoursSpent, 0);
     return {
@@ -32,7 +30,6 @@ export const aggregateHoursByAssignee = (projects: Project[]): AssigneeSummary[]
     };
   });
 
-  // Sort by total hours (descending)
   return summaries.sort((a, b) => b.totalHours - a.totalHours);
 };
 
@@ -41,7 +38,6 @@ export const createSummaryProjects = (projects: Project[]): Project[] => {
   const now = new Date();
 
   return summaries.map((summary, index) => {
-    // Find the earliest start date and latest end date from all tasks
     const taskDates = summary.tasks.map((task) => ({
       start: task.startDate,
       end: task.endDate,
@@ -55,10 +51,8 @@ export const createSummaryProjects = (projects: Project[]): Project[] => {
       current.end > latest ? current.end : latest
     , taskDates[0]?.end || now);
 
-    // Create unique project ID
     const projectId = `summary-${summary.assignee.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}-${index}`;
 
-    // Create a single summary task with total hours
     const summaryTask: Task = {
       id: `${projectId}-task`,
       name: `Total Hours: ${summary.totalHours}h`,
@@ -73,7 +67,6 @@ export const createSummaryProjects = (projects: Project[]): Project[] => {
       color: '#f97316',
     };
 
-    // Create a new project for this assignee with just one task showing total hours
     const summaryProject: Project = {
       id: projectId,
       name: `Hours Summary: ${summary.assignee}`,
@@ -81,7 +74,7 @@ export const createSummaryProjects = (projects: Project[]): Project[] => {
       startDate: earliestStart,
       endDate: latestEnd,
       status: 'active',
-      color: '#f97316', // Orange color for summary projects
+      color: '#f97316',
       tasks: [summaryTask],
     };
 

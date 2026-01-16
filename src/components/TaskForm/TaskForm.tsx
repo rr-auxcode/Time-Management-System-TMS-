@@ -22,7 +22,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, project, onSubmit, onC
   const [color, setColor] = useState(project.color || '#f97316');
   const [timeEntries, setTimeEntries] = useState<Omit<TimeEntry, 'id' | 'taskId'>[]>([]);
 
-  // Helper to format Date to YYYY-MM-DDTHH:MM format
   const formatDateTime = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -36,7 +35,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, project, onSubmit, onC
     if (task) {
       setName(task.name);
       setDescription(task.description || '');
-      // Format with time included (HH:MM)
       setStartDate(formatDateTime(task.startDate));
       if (task.endDate) {
         setEndDate(formatDateTime(task.endDate));
@@ -49,7 +47,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, project, onSubmit, onC
       setStatus(task.status);
       setAssignee(task.assignee || '');
       setColor(task.color || project.color || '#f97316');
-      // Load time entries, converting to form format
       setTimeEntries(
         (task.timeEntries || []).map(entry => ({
           date: entry.date,
@@ -58,7 +55,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, project, onSubmit, onC
         }))
       );
     } else {
-      // Default to project start date with current hour
       const now = new Date();
       const projectStart = new Date(project.startDate);
       projectStart.setHours(now.getHours(), 0, 0, 0);
@@ -73,13 +69,9 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, project, onSubmit, onC
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Convert YYYY-MM-DDTHH:MM strings to Date objects
-    // DatePicker returns YYYY-MM-DDTHH:MM format when includeTime=true
     const parseDateTime = (dateTimeString: string): Date => {
       if (!dateTimeString) return new Date();
-      // If already includes time, use as-is; otherwise add default time
       if (dateTimeString.includes('T')) {
-        // Ensure we have seconds for proper parsing
         const parts = dateTimeString.split('T');
         const timePart = parts[1] || '00:00';
         const timeParts = timePart.split(':');
@@ -104,8 +96,8 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, project, onSubmit, onC
       color,
       timeEntries: timeEntries.map(entry => ({
         ...entry,
-        id: '', // Will be generated on the backend
-        taskId: '', // Will be set when task is created
+        id: '',
+        taskId: '',
         date: entry.date instanceof Date ? entry.date : parseDateTime(typeof entry.date === 'string' ? entry.date : formatDateTime(entry.date as Date)),
       })) as TimeEntry[],
     });
@@ -235,7 +227,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, project, onSubmit, onC
         </div>
 
         <div className="form-group">
-          {/* Empty space for alignment */}
         </div>
       </div>
 
@@ -285,7 +276,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, project, onSubmit, onC
         </div>
       </div>
 
-      {/* Time Entries Section */}
       <div className="form-group">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
           <label>Time Entries</label>
@@ -331,7 +321,6 @@ export const TaskForm: React.FC<TaskFormProps> = ({ task, project, onSubmit, onC
                         return dateStr.includes('T') ? dateStr : new Date(dateStr).toISOString().split('T')[0];
                       })()}
                       onChange={(dateString) => {
-                        // Parse YYYY-MM-DDTHH:MM or YYYY-MM-DD to Date
                         const date = dateString.includes('T') 
                           ? new Date(dateString + ':00')
                           : new Date(dateString + 'T00:00:00');

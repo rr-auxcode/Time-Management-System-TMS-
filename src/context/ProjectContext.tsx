@@ -22,7 +22,6 @@ const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'tms-projects';
 
-// Helper to convert Supabase project to app Project type
 function dbProjectToProject(dbProject: any, tasks: Task[]): Project {
   return {
     id: dbProject.id,
@@ -36,16 +35,14 @@ function dbProjectToProject(dbProject: any, tasks: Task[]): Project {
   };
 }
 
-// Helper to convert Supabase task to app Task type
-// Dates from Supabase are TIMESTAMPTZ, so they preserve date and time
 function dbTaskToTask(dbTask: any, timeEntries: TimeEntry[] = []): Task {
   return {
     id: dbTask.id,
     projectId: dbTask.project_id,
     name: dbTask.name,
     description: dbTask.description || undefined,
-    startDate: new Date(dbTask.start_date), // Preserves date and time from database
-    endDate: dbTask.end_date ? new Date(dbTask.end_date) : undefined, // Preserves date and time
+    startDate: new Date(dbTask.start_date),
+    endDate: dbTask.end_date ? new Date(dbTask.end_date) : undefined,
     estimatedHours: dbTask.estimated_hours ? Number(dbTask.estimated_hours) : undefined,
     status: dbTask.status,
     assignee: dbTask.assignee || undefined,
@@ -62,24 +59,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [error, setError] = useState<string | null>(null);
   const [useSupabase, setUseSupabase] = useState(true);
 
-  // Load projects from Supabase or localStorage
   const loadProjects = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Check if user is authenticated
       const { data: { user }, error: authError } = await supabase.auth.getUser();
 
       if (!user || authError) {
-        // Fallback to localStorage if not authenticated
         console.warn('User not authenticated, using localStorage');
         loadFromLocalStorage();
         setUseSupabase(false);
         return;
       }
 
-      // Check if we need to migrate from localStorage
       if (hasLocalStorageData() && !isMigrationComplete()) {
         console.log('Migrating data from localStorage to Supabase...');
         const migrationResult = await migrateLocalStorageToSupabase();
@@ -90,7 +83,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      // Load projects from Supabase
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')
@@ -106,20 +98,18 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return;
       }
 
-      // Load all tasks for all projects
       const projectIds = projectsData.map(p => p.id);
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('*')
         .in('project_id', projectIds)
         .order('start_date', { ascending: true })
-        .order('end_date', { ascending: true, nullsFirst: false }); // Sort by start date, then end date (tasks without end date come after)
+        .order('end_date', { ascending: true, nullsFirst: false });
 
       if (tasksError) {
         throw tasksError;
       }
 
-      // Load all time entries for all tasks
       const taskIds = (tasksData || []).map((t: any) => t.id);
       const { data: timeEntriesData, error: timeEntriesError } = await supabase
         .from('time_entries')
@@ -131,7 +121,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.warn('Error loading time entries:', timeEntriesError);
       }
 
-      // Group time entries by task
       const timeEntriesByTask = new Map<string, TimeEntry[]>();
       (timeEntriesData || []).forEach((dbEntry: any) => {
         const entry: TimeEntry = {
@@ -148,7 +137,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         timeEntriesByTask.get(entry.taskId)!.push(entry);
       });
 
-      // Group tasks by project
       const tasksByProject = new Map<string, Task[]>();
       (tasksData || []).forEach((dbTask: any) => {
         const timeEntries = timeEntriesByTask.get(dbTask.id) || [];
@@ -159,7 +147,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         tasksByProject.get(task.projectId)!.push(task);
       });
 
-      // Convert to app format
       const loadedProjects = projectsData.map((dbProject: any) => {
         const tasks = tasksByProject.get(dbProject.id) || [];
         return dbProjectToProject(dbProject, tasks);
@@ -170,7 +157,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err) {
       console.error('Error loading projects from Supabase:', err);
       setError(err instanceof Error ? err.message : 'Failed to load projects');
-      // Fallback to localStorage
       loadFromLocalStorage();
       setUseSupabase(false);
     } finally {
@@ -178,7 +164,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // Fallback: Load from localStorage
   const loadFromLocalStorage = useCallback(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -207,8 +192,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // Save to localStorage as backup
   const saveToLocalStorage = useCallback((projectsToSave: Project[]) => {
+ {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsToSave));
     } catch (error) {
@@ -216,12 +201,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // Load projects on mount
   useEffect(() => {
     loadProjects();
   }, [loadProjects]);
 
-  // Save to localStorage whenever projects change (as backup)
   useEffect(() => {
     if (projects.length > 0) {
       saveToLocalStorage(projects);
@@ -232,7 +215,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
-      // Fallback to localStorage
       const newProject: Project = {
         ...projectData,
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -242,8 +224,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return newProject;
     }
 
-    // Helper to convert Date to ISO string for storage (preserves date and time, handles timezone)
-    // Converts local date/time to ISO string preserving the intended date/time values
     const dateToISO = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -251,11 +231,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       const seconds = String(date.getSeconds()).padStart(2, '0');
-      // Store as local time converted to UTC (preserves the date/time user selected)
       return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
     };
 
-    // Save to Supabase
     const { data: insertedProject, error: insertError } = await supabase
       .from('projects')
       .insert({
@@ -283,7 +261,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
-      // Fallback to localStorage
       setProjects((prev) =>
         prev.map((project) => {
           if (project.id === projectId) {
@@ -299,8 +276,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    // Helper to convert Date to ISO string for storage (preserves date and time, handles timezone)
-    // Converts local date/time to ISO string preserving the intended date/time values
     const dateToISO = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -308,11 +283,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       const seconds = String(date.getSeconds()).padStart(2, '0');
-      // Store as local time converted to UTC (preserves the date/time user selected)
       return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
     };
 
-    // Update in Supabase
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.description !== undefined) updateData.description = updates.description || null;
@@ -330,7 +303,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error(`Failed to update project: ${updateError.message}`);
     }
 
-    // Update local state
     setProjects((prev) =>
       prev.map((project) => {
         if (project.id === projectId) {
@@ -349,7 +321,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
-      // Fallback to localStorage
       setProjects((prev) => prev.filter((p) => p.id !== projectId));
       if (selectedProject?.id === projectId) {
         setSelectedProject(null);
@@ -357,7 +328,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    // Delete from Supabase (tasks will be deleted via CASCADE)
     const { error: deleteError } = await supabase
       .from('projects')
       .delete()
@@ -367,7 +337,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error(`Failed to delete project: ${deleteError.message}`);
     }
 
-    // Update local state
     setProjects((prev) => prev.filter((p) => p.id !== projectId));
     if (selectedProject?.id === projectId) {
       setSelectedProject(null);
@@ -382,7 +351,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
-      // Fallback to localStorage
       const newTask: Task = {
         ...taskData,
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -402,8 +370,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return newTask;
     }
 
-    // Helper to convert Date to ISO string for storage (preserves date and time, handles timezone)
-    // Converts local date/time to ISO string preserving the intended date/time values
     const dateToISO = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -411,11 +377,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       const seconds = String(date.getSeconds()).padStart(2, '0');
-      // Store as local time converted to UTC (preserves the date/time user selected)
       return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
     };
 
-    // Save to Supabase
     const { data: insertedTask, error: insertError } = await supabase
       .from('tasks')
       .insert({
@@ -437,10 +401,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error(`Failed to create task: ${insertError.message}`);
     }
 
-    // Save time entries if provided
     const timeEntries = taskData.timeEntries || [];
     if (timeEntries.length > 0) {
-      // Helper to convert Date to date string for time_entries (DATE type)
       const dateToDateString = (date: Date): string => {
         if (date instanceof Date) {
           const year = date.getFullYear();
@@ -448,7 +410,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const day = String(date.getDate()).padStart(2, '0');
           return `${year}-${month}-${day}`;
         }
-        // Already a string in YYYY-MM-DD format
         return date;
       };
 
@@ -468,7 +429,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     }
 
-    // Reload time entries for the new task
     const { data: loadedTimeEntries } = await supabase
       .from('time_entries')
       .select('*')
@@ -486,7 +446,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const newTask = dbTaskToTask(insertedTask, timeEntriesList);
     
-    // Update local state
     setProjects((prev) =>
       prev.map((project) =>
         project.id === projectId
@@ -506,7 +465,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
-      // Fallback to localStorage
       setProjects((prev) =>
         prev.map((project) =>
           project.id === projectId
@@ -534,8 +492,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    // Helper to convert Date to ISO string for storage (preserves date and time, handles timezone)
-    // Converts local date/time to ISO string preserving the intended date/time values
     const dateToISO = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -543,11 +499,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const hours = String(date.getHours()).padStart(2, '0');
       const minutes = String(date.getMinutes()).padStart(2, '0');
       const seconds = String(date.getSeconds()).padStart(2, '0');
-      // Store as local time converted to UTC (preserves the date/time user selected)
       return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}.000Z`;
     };
 
-    // Update in Supabase
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.description !== undefined) updateData.description = updates.description || null;
@@ -559,9 +513,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (updates.color !== undefined) updateData.color = updates.color || null;
     if (updates.dependencies !== undefined) updateData.dependencies = updates.dependencies || null;
 
-    // Handle time entries update if provided
     if (updates.timeEntries !== undefined) {
-      // Delete existing time entries
       const { error: deleteError } = await supabase
         .from('time_entries')
         .delete()
@@ -571,7 +523,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.warn('Error deleting old time entries:', deleteError);
       }
 
-      // Helper to convert Date to date string for time_entries
       const dateToDateString = (date: Date | string): string => {
         if (date instanceof Date) {
           const year = date.getFullYear();
@@ -579,10 +530,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const day = String(date.getDate()).padStart(2, '0');
           return `${year}-${month}-${day}`;
         }
-        return date; // Already a string in YYYY-MM-DD format
+        return date;
       };
 
-      // Insert new time entries
       if (updates.timeEntries.length > 0) {
         const timeEntriesToInsert = updates.timeEntries.map(entry => ({
           task_id: taskId,
@@ -610,7 +560,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error(`Failed to update task: ${updateError.message}`);
     }
 
-    // Update local state
     setProjects((prev) =>
       prev.map((project) =>
         project.id === projectId
@@ -641,7 +590,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
-      // Fallback to localStorage
       setProjects((prev) =>
         prev.map((project) =>
           project.id === projectId
@@ -657,7 +605,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return;
     }
 
-    // Delete from Supabase
     const { error: deleteError } = await supabase
       .from('tasks')
       .delete()
@@ -667,7 +614,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error(`Failed to delete task: ${deleteError.message}`);
     }
 
-    // Update local state
     setProjects((prev) =>
       prev.map((project) =>
         project.id === projectId
