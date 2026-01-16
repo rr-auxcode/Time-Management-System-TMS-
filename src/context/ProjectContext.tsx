@@ -193,7 +193,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const saveToLocalStorage = useCallback((projectsToSave: Project[]) => {
- {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(projectsToSave));
     } catch (error) {
