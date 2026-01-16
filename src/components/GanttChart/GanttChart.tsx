@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Task, Project, TimelineView } from '../../types';
+import { Task, Project, TimelineView, VacationRequest } from '../../types';
 import {
   calculateTimelineRange,
   calculateTaskPosition,
@@ -7,6 +7,7 @@ import {
   getDaysBetween,
   getPixelsPerDay,
 } from '../../utils/ganttCalculations';
+import { supabase } from '../../lib/supabase';
 import './GanttChart.css';
 
 interface GanttChartProps {
@@ -24,6 +25,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 }) => {
   const timelineRef = useRef<HTMLDivElement>(null);
   const [timelineWidth, setTimelineWidth] = useState(1000);
+  const [vacationRequests, setVacationRequests] = useState<VacationRequest[]>([]);
 
   const allTasks = projects.flatMap((project) => project.tasks);
 
@@ -48,6 +50,45 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     window.addEventListener('resize', updateWidth);
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
+
+  useEffect(() => {
+    const loadVacations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('vacation_requests')
+          .select('*')
+          .eq('status', 'approved')
+          .gte('end_date', view.startDate.toISOString().split('T')[0])
+          .lte('start_date', view.endDate.toISOString().split('T')[0]);
+
+        if (error) {
+          console.error('Error loading vacations:', error);
+          return;
+        }
+
+        if (data) {
+          const formatted: VacationRequest[] = data.map((req: any) => ({
+            id: req.id,
+            user_id: req.user_id,
+            user_email: req.user_email,
+            start_date: new Date(req.start_date),
+            end_date: new Date(req.end_date),
+            status: req.status,
+            approved_by: req.approved_by || undefined,
+            approved_at: req.approved_at ? new Date(req.approved_at) : undefined,
+            notes: req.notes || undefined,
+            created_at: new Date(req.created_at),
+            updated_at: new Date(req.updated_at),
+          }));
+          setVacationRequests(formatted);
+        }
+      } catch (error) {
+        console.error('Error loading vacations:', error);
+      }
+    };
+
+    loadVacations();
+  }, [view.startDate, view.endDate]);
 
   if (allTasks.length === 0) {
     return (
@@ -135,6 +176,49 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   />
                 );
               })}
+              {vacationRequests
+                .filter(vacation => {
+                  const vacStart = new Date(vacation.start_date);
+                  vacStart.setHours(0, 0, 0, 0);
+                  const vacEnd = new Date(vacation.end_date);
+                  vacEnd.setHours(23, 59, 59, 999);
+                  return vacStart <= timelineEnd && vacEnd >= timelineStart;
+                })
+                .map((vacation) => {
+                  const vacStart = new Date(vacation.start_date);
+                  vacStart.setHours(0, 0, 0, 0);
+                  const vacEnd = new Date(vacation.end_date);
+                  vacEnd.setHours(23, 59, 59, 999);
+                  
+                  const startDate = vacStart < timelineStart ? timelineStart : vacStart;
+                  const endDate = vacEnd > timelineEnd ? timelineEnd : vacEnd;
+                  
+                  const daysFromStart = getDaysBetween(timelineStart, startDate);
+                  const vacationDays = getDaysBetween(startDate, endDate) + 1;
+                  
+                  const x = daysFromStart * pixelsPerDay;
+                  const width = vacationDays * pixelsPerDay;
+                  
+                  return (
+                    <div
+                      key={`vacation-${vacation.id}`}
+                      className="vacation-bar"
+                      style={{
+                        position: 'absolute',
+                        top: '0px',
+                        left: `${x}px`,
+                        width: `${width}px`,
+                        height: '100%',
+                        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+                        borderLeft: '2px solid #3b82f6',
+                        borderRight: '2px solid #3b82f6',
+                        zIndex: 0,
+                        pointerEvents: 'none',
+                      }}
+                      title={`Vacation: ${vacation.user_email} (${vacation.start_date.toLocaleDateString()} - ${vacation.end_date.toLocaleDateString()})`}
+                    />
+                  );
+                })}
               {taskPositions.map((position) => (
                 <div
                   key={position.task.id}

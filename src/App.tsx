@@ -6,6 +6,8 @@ import { Modal } from './components/Modal/Modal';
 import { ProjectForm } from './components/ProjectForm/ProjectForm';
 import { TaskForm } from './components/TaskForm/TaskForm';
 import { HoursReport } from './components/HoursReport/HoursReport';
+import { VacationRequestForm } from './components/VacationRequestForm/VacationRequestForm';
+import { VacationApproval } from './components/VacationApproval/VacationApproval';
 import { Login } from './components/Login/Login';
 import { Notification } from './components/Notification/Notification';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -36,7 +38,7 @@ function AppContent() {
 }
 
 function MainApp() {
-  const { isReportManager, isClient } = useAuth();
+  const { isReportManager, isClient, isSuperAdmin } = useAuth();
   const { projects, selectedProject, addProject, updateProject, addTask, updateTask, isLoading, error } = useProjects();
   const now = new Date();
   const [view] = useState<TimelineView>({
@@ -47,6 +49,8 @@ function MainApp() {
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isVacationRequestModalOpen, setIsVacationRequestModalOpen] = useState(false);
+  const [isVacationApprovalModalOpen, setIsVacationApprovalModalOpen] = useState(false);
   const [hoursReports, setHoursReports] = useState<PersonHoursReport[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -322,6 +326,16 @@ function MainApp() {
               {new Date(view.startDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </div>
             <div className="action-buttons">
+              {!isClient && (
+                <button className="vacation-btn" onClick={() => setIsVacationRequestModalOpen(true)} title="Request vacation days">
+                  🏖️ Request Vacation
+                </button>
+              )}
+              {isSuperAdmin && (
+                <button className="vacation-approval-btn" onClick={() => setIsVacationApprovalModalOpen(true)} title="Approve vacation requests">
+                  ✅ Vacation Requests
+                </button>
+              )}
               {isReportManager && (
                 <button className="summary-btn" onClick={handleGenerateHoursReport} title="Generate and send hours reports by email">
                   📊 Generate Reports
@@ -388,6 +402,32 @@ function MainApp() {
           onSendEmails={handleSendEmails}
         />
       )}
+
+      <Modal
+        isOpen={isVacationRequestModalOpen}
+        onClose={() => setIsVacationRequestModalOpen(false)}
+        title="Request Vacation"
+      >
+        <VacationRequestForm
+          onClose={() => setIsVacationRequestModalOpen(false)}
+          onSuccess={() => {
+            alert('Vacation request submitted successfully! It will be reviewed by an administrator.');
+          }}
+        />
+      </Modal>
+
+      <Modal
+        isOpen={isVacationApprovalModalOpen}
+        onClose={() => setIsVacationApprovalModalOpen(false)}
+        title="Vacation Requests"
+      >
+        <VacationApproval
+          onClose={() => setIsVacationApprovalModalOpen(false)}
+          onUpdate={() => {
+            // Refresh the Gantt chart to show updated vacations
+          }}
+        />
+      </Modal>
     </div>
   );
 }

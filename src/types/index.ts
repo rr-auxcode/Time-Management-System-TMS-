@@ -57,3 +57,16 @@ export interface GanttBar {
   height: number;
 }
 
+export interface VacationRequest {
+  id: string;
+  user_id: string;
+  user_email: string;
+  start_date: Date;
+  end_date: Date;
+  status: 'pending' | 'approved' | 'rejected';
+  approved_by?: string;
+  approved_at?: Date;
+  notes?: string;
+  created_at: Date;
+  updated_at: Date;
+}
