@@ -9,8 +9,8 @@ interface ProjectContextType {
   selectedProject: Project | null;
   isLoading: boolean;
   error: string | null;
-  addProject: (project: Omit<Project, 'id' | 'tasks'>) => Promise<Project>;
-  updateProject: (projectId: string, updates: Partial<Project>) => Promise<void>;
+  addProject: (project: Omit<Project, 'id' | 'tasks'>, clientEmails?: string[]) => Promise<Project>;
+  updateProject: (projectId: string, updates: Partial<Project>, clientEmails?: string[]) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   selectProject: (project: Project | null) => void;
   addTask: (projectId: string, task: Omit<Task, 'id'>) => Promise<Task>;
@@ -242,7 +242,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [projects, saveToLocalStorage]);
 
-  const addProject = useCallback(async (projectData: Omit<Project, 'id' | 'tasks'>): Promise<Project> => {
+  const addProject = useCallback(async (projectData: Omit<Project, 'id' | 'tasks'>, clientEmails?: string[]): Promise<Project> => {
     if (isClient) {
       throw new Error('Clients cannot create projects');
     }
@@ -287,12 +287,27 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       throw new Error(`Failed to create project: ${insertError.message}`);
     }
 
+    if (clientEmails && clientEmails.length > 0) {
+      const accessRecords = clientEmails.map(email => ({
+        project_id: insertedProject.id,
+        client_email: email.toLowerCase(),
+      }));
+
+      const { error: accessError } = await supabase
+        .from('project_client_access')
+        .insert(accessRecords);
+
+      if (accessError) {
+        console.error('Error adding client access:', accessError);
+      }
+    }
+
     const newProject = dbProjectToProject(insertedProject, []);
     setProjects((prev) => [...prev, newProject]);
     return newProject;
   }, [useSupabase, isClient]);
 
-  const updateProject = useCallback(async (projectId: string, updates: Partial<Project>) => {
+  const updateProject = useCallback(async (projectId: string, updates: Partial<Project>, clientEmails?: string[]) => {
     if (isClient) {
       throw new Error('Clients cannot update projects');
     }
@@ -340,6 +355,32 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (updateError) {
       throw new Error(`Failed to update project: ${updateError.message}`);
+    }
+
+    if (clientEmails !== undefined) {
+      const { error: deleteError } = await supabase
+        .from('project_client_access')
+        .delete()
+        .eq('project_id', projectId);
+
+      if (deleteError) {
+        console.error('Error removing old client access:', deleteError);
+      }
+
+      if (clientEmails.length > 0) {
+        const accessRecords = clientEmails.map(email => ({
+          project_id: projectId,
+          client_email: email.toLowerCase(),
+        }));
+
+        const { error: accessError } = await supabase
+          .from('project_client_access')
+          .insert(accessRecords);
+
+        if (accessError) {
+          console.error('Error updating client access:', accessError);
+        }
+      }
     }
 
     setProjects((prev) =>

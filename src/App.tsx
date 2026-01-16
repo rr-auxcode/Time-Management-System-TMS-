@@ -71,12 +71,12 @@ function MainApp() {
     setIsProjectModalOpen(true);
   };
 
-  const handleProjectSubmit = async (projectData: Omit<Project, 'id' | 'tasks'>) => {
+  const handleProjectSubmit = async (projectData: Omit<Project, 'id' | 'tasks'>, clientEmails?: string[]) => {
     try {
       if (editingProject) {
-        await updateProject(editingProject.id, projectData);
+        await updateProject(editingProject.id, projectData, clientEmails);
       } else {
-        await addProject(projectData);
+        await addProject(projectData, clientEmails);
       }
       setIsProjectModalOpen(false);
       setEditingProject(null);

@@ -1,21 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Project } from '../../types';
 import { DatePicker } from '../DatePicker/DatePicker';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabase';
 import './ProjectForm.css';
 
 interface ProjectFormProps {
   project?: Project | null;
-  onSubmit: (project: Omit<Project, 'id' | 'tasks'>) => void;
+  onSubmit: (project: Omit<Project, 'id' | 'tasks'>, clientEmails?: string[]) => void;
   onCancel: () => void;
 }
 
 export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onCancel }) => {
+  const { isSuperAdmin } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [status, setStatus] = useState<'active' | 'completed' | 'cancelled' | 'on-hold'>('active');
   const [color, setColor] = useState('#f97316');
+  const [clientEmails, setClientEmails] = useState<string[]>([]);
+  const [newClientEmail, setNewClientEmail] = useState('');
 
   const formatDateTime = (date: Date): string => {
     const year = date.getFullYear();
@@ -34,6 +39,10 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
       setEndDate(formatDateTime(project.endDate));
       setStatus(project.status);
       setColor(project.color || '#f97316');
+      
+      if (isSuperAdmin) {
+        loadClientAccess(project.id);
+      }
     } else {
       const now = new Date();
       const future = new Date();
@@ -41,8 +50,59 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
       future.setHours(now.getHours(), 0, 0, 0);
       setStartDate(formatDateTime(now));
       setEndDate(formatDateTime(future));
+      setClientEmails([]);
     }
-  }, [project]);
+  }, [project, isSuperAdmin]);
+
+  const loadClientAccess = async (projectId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('project_client_access')
+        .select('client_email')
+        .eq('project_id', projectId);
+      
+      if (error) {
+        console.error('Error loading client access:', error);
+        return;
+      }
+      
+      if (data) {
+        setClientEmails(data.map(item => item.client_email));
+      }
+    } catch (error) {
+      console.error('Error loading client access:', error);
+    }
+  };
+
+  const addClientEmail = () => {
+    const email = newClientEmail.trim().toLowerCase();
+    if (!email) return;
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      alert('Please enter a valid email address');
+      return;
+    }
+    
+    if (clientEmails.includes(email)) {
+      alert('This email is already added');
+      return;
+    }
+    
+    setClientEmails([...clientEmails, email]);
+    setNewClientEmail('');
+  };
+
+  const removeClientEmail = (emailToRemove: string) => {
+    setClientEmails(clientEmails.filter(email => email !== emailToRemove));
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addClientEmail();
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +128,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
       endDate: endDateObj,
       status,
       color,
-    });
+    }, isSuperAdmin ? clientEmails : undefined);
   };
 
   return (
@@ -162,6 +222,85 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSubmit, onC
           </div>
         </div>
       </div>
+
+      {isSuperAdmin && (
+        <div className="form-group">
+          <label htmlFor="client-emails">Client Access</label>
+          <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>
+            Add client email addresses to grant them access to this project. Clients will only be able to view this project.
+          </p>
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+            <input
+              id="client-emails"
+              type="email"
+              value={newClientEmail}
+              onChange={(e) => setNewClientEmail(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="client@example.com"
+              style={{ flex: 1 }}
+            />
+            <button
+              type="button"
+              onClick={addClientEmail}
+              className="btn-secondary"
+              style={{ padding: '0.5rem 1rem' }}
+            >
+              Add
+            </button>
+          </div>
+          {clientEmails.length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: '0.5rem',
+              marginTop: '0.5rem',
+              padding: '0.75rem',
+              background: '#f9fafb',
+              borderRadius: '6px',
+              border: '1px solid #e5e7eb'
+            }}>
+              {clientEmails.map((email) => (
+                <div
+                  key={email}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.375rem 0.75rem',
+                    background: 'white',
+                    borderRadius: '4px',
+                    border: '1px solid #d1d5db',
+                    fontSize: '0.875rem'
+                  }}
+                >
+                  <span>{email}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeClientEmail(email)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#ef4444',
+                      cursor: 'pointer',
+                      fontSize: '1.25rem',
+                      lineHeight: 1,
+                      padding: 0,
+                      width: '20px',
+                      height: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Remove client access"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="form-actions">
         <button type="button" className="btn-secondary" onClick={onCancel}>

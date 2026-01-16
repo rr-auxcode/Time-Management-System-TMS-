@@ -28,7 +28,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const REPORT_MANAGER_EMAIL = 'ff@auxcode.com';
-const SUPER_ADMIN_EMAILS = ['o@auxcode.com', 'alex@auxcode.com', 'bobby@auxcode.com'];
+const SUPER_ADMIN_EMAILS = ['o@auxcode.com', 'alex@auxcode.com', 'bobby@auxcode.com', 'rosen@auxcode.com'];
 
 function determineUserRole(email: string): UserRole {
   const emailLower = email.toLowerCase();
@@ -67,6 +67,10 @@ async function supabaseUserToUser(supabaseUser: SupabaseUser): Promise<User> {
   const baseRole = determineUserRole(email);
   let finalRole: UserRole = baseRole;
   
+  console.log('Determining role for email:', email);
+  console.log('Base role:', baseRole);
+  console.log('Super admin emails:', SUPER_ADMIN_EMAILS);
+  
   if (baseRole === 'normal') {
     const isClient = await checkIfClient(email);
     if (isClient) {
@@ -74,7 +78,9 @@ async function supabaseUserToUser(supabaseUser: SupabaseUser): Promise<User> {
     }
   }
   
-  return {
+  console.log('Final role:', finalRole);
+  
+  const userData = {
     id: supabaseUser.id,
     name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || email.split('@')[0] || 'User',
     email: email,
@@ -82,6 +88,10 @@ async function supabaseUserToUser(supabaseUser: SupabaseUser): Promise<User> {
     role: finalRole,
     isReportManager: emailLower === REPORT_MANAGER_EMAIL.toLowerCase() || finalRole === 'super_admin',
   };
+  
+  console.log('User data:', userData);
+  
+  return userData;
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
