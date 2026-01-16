@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { Project, Task,  TimeEntry } from '../types';
 import { supabase } from '../lib/supabase';
 import { migrateLocalStorageToSupabase, isMigrationComplete, hasLocalStorageData } from '../utils/dataMigration';
+import { useAuth } from './AuthContext';
 
 interface ProjectContextType {
   projects: Project[];
@@ -53,6 +54,7 @@ function dbTaskToTask(dbTask: any, timeEntries: TimeEntry[] = []): Task {
 }
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { role, user: authUser, isSuperAdmin, isClient } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,10 +85,40 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
       }
 
-      const { data: projectsData, error: projectsError } = await supabase
+      let projectsQuery = supabase
         .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*');
+
+      if (isSuperAdmin) {
+        projectsQuery = projectsQuery.order('created_at', { ascending: false });
+      } else if (isClient && authUser?.email) {
+        const { data: accessData, error: accessError } = await supabase
+          .from('project_client_access')
+          .select('project_id')
+          .eq('client_email', authUser.email.toLowerCase());
+
+        if (accessError) {
+          throw accessError;
+        }
+
+        const accessibleProjectIds = accessData?.map(a => a.project_id) || [];
+        
+        if (accessibleProjectIds.length === 0) {
+          setProjects([]);
+          setIsLoading(false);
+          return;
+        }
+
+        projectsQuery = projectsQuery
+          .in('id', accessibleProjectIds)
+          .order('created_at', { ascending: false });
+      } else {
+        projectsQuery = projectsQuery
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+      }
+
+      const { data: projectsData, error: projectsError } = await projectsQuery;
 
       if (projectsError) {
         throw projectsError;
@@ -162,7 +194,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [role, isSuperAdmin, isClient, authUser?.email]);
 
   const loadFromLocalStorage = useCallback(() => {
     try {
@@ -211,6 +243,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [projects, saveToLocalStorage]);
 
   const addProject = useCallback(async (projectData: Omit<Project, 'id' | 'tasks'>): Promise<Project> => {
+    if (isClient) {
+      throw new Error('Clients cannot create projects');
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
@@ -254,9 +290,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const newProject = dbProjectToProject(insertedProject, []);
     setProjects((prev) => [...prev, newProject]);
     return newProject;
-  }, [useSupabase]);
+  }, [useSupabase, isClient]);
 
   const updateProject = useCallback(async (projectId: string, updates: Partial<Project>) => {
+    if (isClient) {
+      throw new Error('Clients cannot update projects');
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
@@ -314,9 +354,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return project;
       })
     );
-  }, [selectedProject, useSupabase]);
+  }, [selectedProject, useSupabase, isClient]);
 
   const deleteProject = useCallback(async (projectId: string) => {
+    if (isClient) {
+      throw new Error('Clients cannot delete projects');
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
@@ -340,13 +384,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (selectedProject?.id === projectId) {
       setSelectedProject(null);
     }
-  }, [selectedProject, useSupabase]);
+  }, [selectedProject, useSupabase, isClient]);
 
   const selectProject = useCallback((project: Project | null) => {
     setSelectedProject(project);
   }, []);
 
   const addTask = useCallback(async (projectId: string, taskData: Omit<Task, 'id'>): Promise<Task> => {
+    if (isClient) {
+      throw new Error('Clients cannot create tasks');
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
@@ -458,9 +506,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       );
     }
     return newTask;
-  }, [selectedProject, useSupabase]);
+  }, [selectedProject, useSupabase, isClient]);
 
   const updateTask = useCallback(async (projectId: string, taskId: string, updates: Partial<Task>) => {
+    if (isClient) {
+      throw new Error('Clients cannot update tasks');
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
@@ -583,9 +635,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           : null
       );
     }
-  }, [selectedProject, useSupabase]);
+  }, [selectedProject, useSupabase, isClient]);
 
   const deleteTask = useCallback(async (projectId: string, taskId: string) => {
+    if (isClient) {
+      throw new Error('Clients cannot delete tasks');
+    }
+    
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user || !useSupabase) {
@@ -625,7 +681,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         prev ? { ...prev, tasks: prev.tasks.filter((t) => t.id !== taskId) } : null
       );
     }
-  }, [selectedProject, useSupabase]);
+  }, [selectedProject, useSupabase, isClient]);
 
   return (
     <ProjectContext.Provider

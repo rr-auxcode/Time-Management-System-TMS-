@@ -36,7 +36,7 @@ function AppContent() {
 }
 
 function MainApp() {
-  const { isReportManager } = useAuth();
+  const { isReportManager, isClient } = useAuth();
   const { projects, selectedProject, addProject, updateProject, addTask, updateTask, isLoading, error } = useProjects();
   const now = new Date();
   const [view] = useState<TimelineView>({
@@ -54,11 +54,19 @@ function MainApp() {
   const displayProjects = selectedProject ? [selectedProject] : projects;
 
   const handleNewProject = () => {
+    if (isClient) {
+      alert('Clients cannot create projects. Please contact an administrator.');
+      return;
+    }
     setEditingProject(null);
     setIsProjectModalOpen(true);
   };
 
   const handleEditProject = (project: Project) => {
+    if (isClient) {
+      alert('Clients cannot edit projects. Please contact an administrator.');
+      return;
+    }
     setEditingProject(project);
     setIsProjectModalOpen(true);
   };
@@ -79,6 +87,10 @@ function MainApp() {
   };
 
   const handleNewTask = () => {
+    if (isClient) {
+      alert('Clients cannot create tasks. Please contact an administrator.');
+      return;
+    }
     if (!selectedProject) {
       alert('Please select a project first');
       return;
@@ -88,6 +100,9 @@ function MainApp() {
   };
 
   const handleTaskClick = (task: Task) => {
+    if (isClient) {
+      return;
+    }
     setEditingTask(task);
     setIsTaskModalOpen(true);
   };
@@ -312,7 +327,7 @@ function MainApp() {
                   📊 Generate Reports
                 </button>
               )}
-              {selectedProject && (
+              {selectedProject && !isClient && (
                 <button className="add-task-btn" onClick={handleNewTask}>
                   + Add Task
                 </button>

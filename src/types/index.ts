@@ -1,3 +1,5 @@
+export type UserRole = 'normal' | 'client' | 'super_admin';
+
 export interface TimeEntry {
   id: string;
   taskId: string;

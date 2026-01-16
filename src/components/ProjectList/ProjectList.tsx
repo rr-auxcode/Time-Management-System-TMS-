@@ -1,6 +1,7 @@
 import React from 'react';
 import { Project } from '../../types';
 import { useProjects } from '../../context/ProjectContext';
+import { useAuth } from '../../context/AuthContext';
 import './ProjectList.css';
 
 interface ProjectListProps {
@@ -12,6 +13,7 @@ export const ProjectList: React.FC<ProjectListProps> = ({
   onNewProjectClick,
   onEditProjectClick,
 }) => {
+  const { isClient } = useAuth();
   const { projects, selectedProject, selectProject, deleteProject } = useProjects();
 
   const handleProjectClick = (project: Project) => {
@@ -20,6 +22,10 @@ export const ProjectList: React.FC<ProjectListProps> = ({
 
   const handleDelete = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
+    if (isClient) {
+      alert('Clients cannot delete projects. Please contact an administrator.');
+      return;
+    }
     if (window.confirm(`Are you sure you want to delete "${project.name}"? This will also delete all its tasks.`)) {
       deleteProject(project.id);
     }
@@ -27,6 +33,9 @@ export const ProjectList: React.FC<ProjectListProps> = ({
 
   const handleEdit = (e: React.MouseEvent, project: Project) => {
     e.stopPropagation();
+    if (isClient) {
+      return;
+    }
     onEditProjectClick(project);
   };
 
@@ -34,9 +43,11 @@ export const ProjectList: React.FC<ProjectListProps> = ({
     <div className="project-list">
       <div className="project-list-header">
         <h2>Projects</h2>
-        <button className="add-project-btn" onClick={onNewProjectClick}>
-          + New Project
-        </button>
+        {!isClient && (
+          <button className="add-project-btn" onClick={onNewProjectClick}>
+            + New Project
+          </button>
+        )}
       </div>
       <div className="project-items">
         {projects.length === 0 ? (
@@ -60,22 +71,24 @@ export const ProjectList: React.FC<ProjectListProps> = ({
                   {project.tasks.length} {project.tasks.length === 1 ? 'task' : 'tasks'} • {project.status}
                 </p>
               </div>
-              <div className="project-actions">
-                <button
-                  className="project-action-btn edit"
-                  onClick={(e) => handleEdit(e, project)}
-                  title="Edit project"
-                >
-                  ✎
-                </button>
-                <button
-                  className="project-action-btn delete"
-                  onClick={(e) => handleDelete(e, project)}
-                  title="Delete project"
-                >
-                  ×
-                </button>
-              </div>
+              {!isClient && (
+                <div className="project-actions">
+                  <button
+                    className="project-action-btn edit"
+                    onClick={(e) => handleEdit(e, project)}
+                    title="Edit project"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    className="project-action-btn delete"
+                    onClick={(e) => handleDelete(e, project)}
+                    title="Delete project"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
             </div>
           ))
         )}
