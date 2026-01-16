@@ -131,7 +131,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       <div className="gantt-body">
         <div className="gantt-sidebar">
           {allTasks.map((task) => (
-            <div key={task.id} className="gantt-task-row" style={{ height: '60px' }}>
+            <div key={task.id} className="gantt-task-row">
               <div className="task-name" title={task.name}>
                 {task.name}
               </div>
@@ -140,11 +140,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 {task.estimatedHours && ` / ${task.estimatedHours}h`}
               </div>
               {task.endDate ? (
-                <div className="task-dates" style={{ fontSize: '0.7rem', color: '#6b7280', marginTop: '0.125rem' }}>
+                <div className="task-dates" style={{ fontSize: '0.75rem', color: '#6b7280', lineHeight: '1.4' }}>
                   {task.startDate.toLocaleDateString()} {task.startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} - {task.endDate.toLocaleDateString()} {task.endDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                 </div>
               ) : (
-                <div className="task-dates" style={{ fontSize: '0.7rem', color: '#6b7280', fontStyle: 'italic', marginTop: '0.125rem' }}>
+                <div className="task-dates" style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic', lineHeight: '1.4' }}>
                   {task.startDate.toLocaleDateString()} {task.startDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })} - No end date
                 </div>
               )}
