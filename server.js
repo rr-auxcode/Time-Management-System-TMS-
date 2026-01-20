@@ -1,3 +1,4 @@
+import http from 'http';
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -6,12 +7,10 @@ import { readFileSync, existsSync } from 'fs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const app = express();
 const PORT = process.env.PORT || 3000;
 
 console.log('=== SERVER STARTING ===');
 console.log('PORT:', PORT);
-console.log('NODE_ENV:', process.env.NODE_ENV);
 
 // Verify files exist
 const distPath = join(__dirname, 'dist');
@@ -23,31 +22,28 @@ if (!existsSync(distPath) || !existsSync(indexPath)) {
 }
 
 // Load index.html once
-let indexHtml;
-try {
-  indexHtml = readFileSync(indexPath, 'utf8');
-  console.log('✅ index.html loaded');
-} catch (error) {
-  console.error('ERROR loading index.html:', error);
-  process.exit(1);
-}
+const indexHtml = readFileSync(indexPath, 'utf8');
+console.log('✅ index.html loaded');
+
+// Create Express app
+const app = express();
 
 // Health check - FIRST route, respond immediately
 app.get('/health', (req, res) => {
-  console.log('✅ Health check requested');
   res.status(200).send('OK');
 });
 
-// Root route - SECOND route, respond immediately
+// Root route - respond immediately
 app.get('/', (req, res) => {
-  console.log('✅ Root path requested');
   res.setHeader('Content-Type', 'text/html');
   res.send(indexHtml);
 });
 
-// Log all other requests
+// Log requests (after critical routes)
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  if (req.path !== '/health' && req.path !== '/') {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  }
   next();
 });
 
@@ -67,34 +63,41 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server
-let server;
-try {
-  server = app.listen(PORT, '0.0.0.0', () => {
-    const addr = server.address();
-    console.log('=== SERVER READY ===');
-    console.log(`✅ Listening on ${addr.address}:${addr.port}`);
-    console.log(`✅ Health: http://0.0.0.0:${PORT}/health`);
-    console.log(`✅ Root: http://0.0.0.0:${PORT}/`);
-    console.log('=== READY FOR REQUESTS ===');
-  });
-} catch (error) {
-  console.error('Failed to start server:', error);
-  process.exit(1);
-}
+// Create HTTP server
+const server = http.createServer(app);
 
-// Handle SIGTERM gracefully (Railway sends this)
+// Start listening
+server.listen(PORT, '0.0.0.0', () => {
+  const addr = server.address();
+  console.log('=== SERVER READY ===');
+  console.log(`✅ Listening on ${addr.address}:${addr.port}`);
+  console.log(`✅ Health: http://0.0.0.0:${PORT}/health`);
+  console.log(`✅ Root: http://0.0.0.0:${PORT}/`);
+  console.log('=== READY FOR REQUESTS ===');
+  
+  // Verify server is actually listening
+  server.getConnections((err, count) => {
+    if (err) {
+      console.error('Error getting connections:', err);
+    } else {
+      console.log(`✅ Server can accept connections (current: ${count})`);
+    }
+  });
+});
+
+// Handle SIGTERM gracefully
 process.on('SIGTERM', () => {
-  console.log('⚠️  SIGTERM received - Railway is stopping container');
-  console.log('This might be normal if health check failed');
-  if (server) {
-    server.close(() => {
-      console.log('Server closed gracefully');
-      process.exit(0);
-    });
-  } else {
+  console.log('⚠️  SIGTERM received - shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
     process.exit(0);
-  }
+  });
+  
+  // Force close after 10 seconds
+  setTimeout(() => {
+    console.error('Forced shutdown');
+    process.exit(1);
+  }, 10000);
 });
 
 server.on('error', (err) => {
