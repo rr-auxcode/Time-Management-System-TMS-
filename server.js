@@ -11,7 +11,7 @@ const PORT = process.env.PORT || 3000;
 
 // Logging middleware for debugging
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} ${req.url}`);
   next();
 });
 
@@ -24,11 +24,13 @@ if (!existsSync(distPath)) {
   process.exit(1);
 }
 
-// Serve static files (CSS, JS, images, etc.) - but NOT index.html
+// Serve static files (CSS, JS, images, etc.) - exclude index.html
+// Only serve files that actually exist, let routes handle everything else
 app.use(express.static(distPath, {
   maxAge: '1y',
   etag: false,
-  index: false // Don't serve index.html automatically - we'll handle it explicitly
+  index: false, // Don't auto-serve index.html
+  fallthrough: true // Continue to next middleware if file not found
 }));
 
 // Handle root path explicitly - this is critical for OAuth redirects
