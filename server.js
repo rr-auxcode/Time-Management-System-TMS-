@@ -41,6 +41,11 @@ if (!existsSync(indexPath)) {
 
 console.log('Dist directory and index.html found. Starting server...');
 
+// Health check endpoint for Railway
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Serve static files
 app.use(express.static(distPath, {
   maxAge: '1y',
@@ -75,9 +80,18 @@ try {
     console.log(`✅ Server running on port ${PORT}`);
     console.log(`✅ Serving from: ${distPath}`);
     console.log(`✅ Ready to accept requests`);
+    console.log(`✅ Health check available at: http://0.0.0.0:${PORT}/health`);
   });
+  
+  // Verify server is actually listening
+  server.on('listening', () => {
+    const addr = server.address();
+    console.log(`✅ Server listening on ${addr.address}:${addr.port}`);
+  });
+  
 } catch (error) {
   console.error('Failed to start server:', error);
+  console.error('Error stack:', error.stack);
   process.exit(1);
 }
 
