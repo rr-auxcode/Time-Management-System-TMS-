@@ -18,7 +18,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Check dist directory
+// Check dist directory and load index.html into memory
 const distPath = join(__dirname, 'dist');
 const indexPath = join(__dirname, 'dist', 'index.html');
 
@@ -32,11 +32,20 @@ if (!existsSync(indexPath)) {
   process.exit(1);
 }
 
+// Load index.html into memory at startup (faster, no file I/O on each request)
+let indexHtml;
+try {
+  indexHtml = readFileSync(indexPath, 'utf8');
+  console.log('✅ index.html loaded into memory');
+} catch (error) {
+  console.error('ERROR: Failed to read index.html:', error);
+  process.exit(1);
+}
+
 console.log('Files verified. Setting up routes...');
 
 // Health check - MUST be before static files
 app.get('/health', (req, res) => {
-  console.log('Health check requested');
   res.status(200).json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
@@ -46,38 +55,22 @@ app.get('/health', (req, res) => {
 
 // Serve static files (CSS, JS, images) - but NOT index.html
 app.use(express.static(distPath, {
-  index: false // Don't auto-serve index.html
+  index: false, // Don't auto-serve index.html
+  fallthrough: true // Continue to next middleware if file not found
 }));
 
+// Function to serve index.html
+const serveIndex = (req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.send(indexHtml);
+};
+
 // Handle root path explicitly
-app.get('/', (req, res) => {
-  try {
-    console.log('Serving index.html for root path');
-    const html = readFileSync(indexPath, 'utf8');
-    res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.send(html);
-  } catch (error) {
-    console.error('Error serving index.html:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).send('Error loading application');
-  }
-});
+app.get('/', serveIndex);
 
 // Serve index.html for all other routes (SPA routing)
-app.get('*', (req, res) => {
-  try {
-    console.log(`Serving index.html for: ${req.path}`);
-    const html = readFileSync(indexPath, 'utf8');
-    res.setHeader('Content-Type', 'text/html');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.send(html);
-  } catch (error) {
-    console.error('Error serving index.html:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).send('Error loading application');
-  }
-});
+app.get('*', serveIndex);
 
 // Error handler
 app.use((err, req, res, next) => {
