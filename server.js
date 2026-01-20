@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-console.log('Starting server...');
+console.log('=== SERVER STARTING ===');
 console.log('PORT:', PORT);
 console.log('NODE_ENV:', process.env.NODE_ENV);
 
@@ -23,52 +23,78 @@ if (!existsSync(distPath) || !existsSync(indexPath)) {
 }
 
 // Load index.html once
-const indexHtml = readFileSync(indexPath, 'utf8');
-console.log('✅ index.html loaded');
+let indexHtml;
+try {
+  indexHtml = readFileSync(indexPath, 'utf8');
+  console.log('✅ index.html loaded');
+} catch (error) {
+  console.error('ERROR loading index.html:', error);
+  process.exit(1);
+}
 
-// Health check - MUST be FIRST and respond IMMEDIATELY (Railway checks this)
+// Health check - FIRST route, respond immediately
 app.get('/health', (req, res) => {
+  console.log('✅ Health check requested');
   res.status(200).send('OK');
 });
 
-// Root route - MUST be second, respond IMMEDIATELY (Railway might check this too)
+// Root route - SECOND route, respond immediately
 app.get('/', (req, res) => {
+  console.log('✅ Root path requested');
   res.setHeader('Content-Type', 'text/html');
   res.send(indexHtml);
 });
 
-// Request logging (after critical routes to avoid slowing them)
+// Log all other requests
 app.use((req, res, next) => {
-  if (req.path !== '/health' && req.path !== '/') {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  }
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
 
-// Serve static assets (but not index.html)
+// Serve static assets
 app.use('/assets', express.static(join(distPath, 'assets')));
 app.use(express.static(distPath, { index: false }));
 
 // Catch-all for SPA routes
 app.get('*', (req, res) => {
-  console.log(`Serving SPA route: ${req.path}`);
   res.setHeader('Content-Type', 'text/html');
   res.send(indexHtml);
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('Express error:', err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// Start server - CRITICAL: Must respond immediately to health checks
-const server = app.listen(PORT, '0.0.0.0', () => {
-  const addr = server.address();
-  console.log(`✅ Server listening on ${addr.address}:${addr.port}`);
-  console.log(`✅ Health check: http://0.0.0.0:${PORT}/health`);
-  console.log(`✅ Root: http://0.0.0.0:${PORT}/`);
-  console.log('✅ Server ready - Railway can now health check');
+// Start server
+let server;
+try {
+  server = app.listen(PORT, '0.0.0.0', () => {
+    const addr = server.address();
+    console.log('=== SERVER READY ===');
+    console.log(`✅ Listening on ${addr.address}:${addr.port}`);
+    console.log(`✅ Health: http://0.0.0.0:${PORT}/health`);
+    console.log(`✅ Root: http://0.0.0.0:${PORT}/`);
+    console.log('=== READY FOR REQUESTS ===');
+  });
+} catch (error) {
+  console.error('Failed to start server:', error);
+  process.exit(1);
+}
+
+// Handle SIGTERM gracefully (Railway sends this)
+process.on('SIGTERM', () => {
+  console.log('⚠️  SIGTERM received - Railway is stopping container');
+  console.log('This might be normal if health check failed');
+  if (server) {
+    server.close(() => {
+      console.log('Server closed gracefully');
+      process.exit(0);
+    });
+  } else {
+    process.exit(0);
+  }
 });
 
 server.on('error', (err) => {
