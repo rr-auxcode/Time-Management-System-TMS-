@@ -26,22 +26,23 @@ if (!existsSync(distPath) || !existsSync(indexPath)) {
 const indexHtml = readFileSync(indexPath, 'utf8');
 console.log('✅ index.html loaded');
 
-// Request logging
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
-
-// Health check - MUST respond immediately (Railway checks this)
+// Health check - MUST be FIRST and respond IMMEDIATELY (Railway checks this)
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', port: PORT, timestamp: new Date().toISOString() });
+  res.status(200).send('OK');
 });
 
-// Root route - MUST be before static files
+// Root route - MUST be second, respond IMMEDIATELY (Railway might check this too)
 app.get('/', (req, res) => {
-  console.log('Serving root path');
   res.setHeader('Content-Type', 'text/html');
   res.send(indexHtml);
+});
+
+// Request logging (after critical routes to avoid slowing them)
+app.use((req, res, next) => {
+  if (req.path !== '/health' && req.path !== '/') {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  }
+  next();
 });
 
 // Serve static assets (but not index.html)
