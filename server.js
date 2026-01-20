@@ -12,17 +12,7 @@ const PORT = process.env.PORT || 3000;
 console.log('Starting server...');
 console.log('PORT:', PORT);
 
-// Health check - MUST be first route
-app.get('/health', (req, res) => {
-  console.log('Health check requested');
-  res.status(200).json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString(),
-    port: PORT
-  });
-});
-
-// Logging middleware
+// Logging middleware - early
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
@@ -44,17 +34,47 @@ if (!existsSync(indexPath)) {
 
 console.log('Files verified. Setting up routes...');
 
-// Serve static files
-app.use(express.static(distPath));
+// Health check - MUST be before static files
+app.get('/health', (req, res) => {
+  console.log('Health check requested');
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    port: PORT
+  });
+});
 
-// Serve index.html for all routes
-app.get('*', (req, res) => {
+// Serve static files (CSS, JS, images) - but NOT index.html
+app.use(express.static(distPath, {
+  index: false // Don't auto-serve index.html
+}));
+
+// Handle root path explicitly
+app.get('/', (req, res) => {
   try {
+    console.log('Serving index.html for root path');
     const html = readFileSync(indexPath, 'utf8');
     res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'no-cache');
     res.send(html);
   } catch (error) {
     console.error('Error serving index.html:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).send('Error loading application');
+  }
+});
+
+// Serve index.html for all other routes (SPA routing)
+app.get('*', (req, res) => {
+  try {
+    console.log(`Serving index.html for: ${req.path}`);
+    const html = readFileSync(indexPath, 'utf8');
+    res.setHeader('Content-Type', 'text/html');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(html);
+  } catch (error) {
+    console.error('Error serving index.html:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).send('Error loading application');
   }
 });
