@@ -11,7 +11,16 @@ const PORT = process.env.PORT || 3000;
 
 console.log('Starting server...');
 console.log('PORT:', PORT);
-console.log('NODE_ENV:', process.env.NODE_ENV);
+
+// Health check - MUST be first route
+app.get('/health', (req, res) => {
+  console.log('Health check requested');
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    port: PORT
+  });
+});
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -19,49 +28,33 @@ app.use((req, res, next) => {
   next();
 });
 
-// Check dist directory exists
+// Check dist directory
 const distPath = join(__dirname, 'dist');
-console.log('Checking dist path:', distPath);
+const indexPath = join(__dirname, 'dist', 'index.html');
 
 if (!existsSync(distPath)) {
   console.error('ERROR: dist directory does not exist!');
-  console.error(`Expected path: ${distPath}`);
-  console.error('Current directory:', __dirname);
   process.exit(1);
 }
-
-const indexPath = join(__dirname, 'dist', 'index.html');
-console.log('Checking index.html:', indexPath);
 
 if (!existsSync(indexPath)) {
-  console.error('ERROR: index.html not found in dist directory');
-  console.error(`Expected path: ${indexPath}`);
+  console.error('ERROR: index.html not found!');
   process.exit(1);
 }
 
-console.log('Dist directory and index.html found. Starting server...');
-
-// Health check endpoint for Railway
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+console.log('Files verified. Setting up routes...');
 
 // Serve static files
-app.use(express.static(distPath, {
-  maxAge: '1y',
-  etag: false
-}));
+app.use(express.static(distPath));
 
-// Serve index.html for all routes (SPA routing)
+// Serve index.html for all routes
 app.get('*', (req, res) => {
   try {
-    console.log(`Serving index.html for: ${req.path}`);
     const html = readFileSync(indexPath, 'utf8');
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
   } catch (error) {
-    console.error('Error reading index.html:', error);
-    console.error('Error stack:', error.stack);
+    console.error('Error serving index.html:', error);
     res.status(500).send('Error loading application');
   }
 });
@@ -69,47 +62,27 @@ app.get('*', (req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error('Express error:', err);
-  console.error('Error stack:', err.stack);
   res.status(500).send('Internal server error');
 });
 
 // Start server
-let server;
-try {
-  server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ Server running on port ${PORT}`);
-    console.log(`✅ Serving from: ${distPath}`);
-    console.log(`✅ Ready to accept requests`);
-    console.log(`✅ Health check available at: http://0.0.0.0:${PORT}/health`);
-  });
-  
-  // Verify server is actually listening
-  server.on('listening', () => {
-    const addr = server.address();
-    console.log(`✅ Server listening on ${addr.address}:${addr.port}`);
-  });
-  
-} catch (error) {
-  console.error('Failed to start server:', error);
-  console.error('Error stack:', error.stack);
-  process.exit(1);
-}
+const server = app.listen(PORT, '0.0.0.0', () => {
+  const addr = server.address();
+  console.log(`✅ Server listening on ${addr.address}:${addr.port}`);
+  console.log(`✅ Health check: http://0.0.0.0:${PORT}/health`);
+});
 
-// Error handlers
 server.on('error', (error) => {
   console.error('Server error:', error);
-  console.error('Error code:', error.code);
   process.exit(1);
 });
 
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
-  console.error('Stack:', error.stack);
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason);
-  console.error('Promise:', promise);
   process.exit(1);
 });
